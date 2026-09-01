@@ -1,13 +1,14 @@
 import Header from '@/components/layout/Header';
+import MatrixBoard from '@/components/matrix/MatrixBoard';
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header />
 
-      {/* ── Main content area — MatrixBoard sẽ được thêm vào ở Prompt 4 ── */}
+      {/* ── Main content ── */}
       <main className="flex-1 mx-auto w-full max-w-screen-xl px-4 py-6">
-        {/* Placeholder: sẽ được thay bằng <MatrixBoard /> */}
+        <MatrixBoard />
       </main>
     </div>
   );
