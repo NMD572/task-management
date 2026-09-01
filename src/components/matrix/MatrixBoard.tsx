@@ -1,9 +1,10 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 import { parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { useAppStore } from '@/lib/store';
 import { useFilter } from '@/lib/filterContext';
+import { processFixedRecurringTasks } from '@/lib/recurring';
 import QuadrantColumn from './QuadrantColumn';
 import type { Classification, Task } from '@/lib/types';
 
@@ -22,8 +23,19 @@ function sortByDeadline(tasks: Task[]): Task[] {
 
 // ── Component ─────────────────────────────────────────────────────────────
 export default function MatrixBoard() {
-  const allTasks = useAppStore((s) => s.tasks);
+  const allTasks    = useAppStore((s) => s.tasks);
+  const addTask     = useAppStore((s) => s.addTask);
+  const updateTask  = useAppStore((s) => s.updateTask);
   const { searchText, labelIds, dateFrom, dateTo } = useFilter();
+
+  // Process fixed-interval recurring tasks on load / when tasks hydrate
+  const hasProcessedRef = useRef(false);
+  useEffect(() => {
+    if (allTasks.length > 0 && !hasProcessedRef.current) {
+      hasProcessedRef.current = true;
+      processFixedRecurringTasks(allTasks, addTask, updateTask);
+    }
+  }, [allTasks, addTask, updateTask]);
 
   // Apply filters — never mutate store.tasks
   const filteredTasks = useMemo(() => {

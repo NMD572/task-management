@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import { Search, Globe, LogIn, Plus, X } from 'lucide-react';
+import { Search, Globe, Plus, X } from 'lucide-react';
 import TaskModal from '@/components/task/TaskModal';
+import GoogleLoginButton from '@/components/auth/GoogleLoginButton';
 import { useFilter } from '@/lib/filterContext';
 
 export default function Header() {
@@ -96,16 +97,8 @@ export default function Header() {
               <span className="hidden sm:inline">VI</span>
             </button>
 
-            {/* Google login placeholder */}
-            <button
-              type="button"
-              title="Đăng nhập với Google"
-              className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 transition"
-              disabled
-            >
-              <LogIn size={16} />
-              <span className="hidden sm:inline">Đăng nhập</span>
-            </button>
+            {/* Google login button */}
+            <GoogleLoginButton />
           </div>
         </div>
       </header>

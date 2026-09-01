@@ -53,7 +53,7 @@ interface AppState {
   userProfile: UserProfile | null;
 
   // Task actions
-  addTask: (task: Omit<Task, 'id' | 'createdAt'>) => void;
+  addTask: (task: Omit<Task, 'id' | 'createdAt'> | Task) => void;
   updateTask: (id: string, updates: Partial<Omit<Task, 'id' | 'createdAt'>>) => void;
   deleteTask: (id: string) => void;
 
@@ -94,8 +94,8 @@ export const useAppStore = create<AppState>()(
             ...state.tasks,
             {
               ...taskData,
-              id: generateId(),
-              createdAt: new Date().toISOString(),
+              id: ('id' in taskData && taskData.id) ? taskData.id : generateId(),
+              createdAt: ('createdAt' in taskData && taskData.createdAt) ? taskData.createdAt : new Date().toISOString(),
             },
           ],
         })),
