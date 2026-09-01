@@ -159,7 +159,9 @@ export function FilterProvider({ children }: { children: ReactNode }) {
 
   const hasActiveFilters =
     state.searchText !== '' ||
-    state.labelIds.length > 0;
+    state.labelIds.length > 0 ||
+    state.dateFrom !== getDefaultDateFrom() ||
+    state.dateTo !== getDefaultDateTo();
 
   return (
     <FilterContext.Provider
