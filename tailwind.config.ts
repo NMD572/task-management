@@ -11,6 +11,10 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        do_now: "#14B8A6",
+        schedule: "#F59E0B",
+        delegate: "#EC4899",
+        eliminate: "#7C3AED",
       },
     },
   },
