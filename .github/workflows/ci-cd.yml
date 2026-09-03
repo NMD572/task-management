@@ -1,0 +1,99 @@
+# ==============================================================================
+# GitHub Actions CI/CD Pipeline for Eisenhower Task Management
+# ==============================================================================
+#
+# 📋 HƯỚNG DẪN CẤU HÌNH SECRETS TRÊN GITHUB (Settings > Secrets and variables > Actions):
+#
+# 1. VERCEL_TOKEN:
+#    - Truy cập: https://vercel.com/account/tokens
+#    - Nhấn "Create Token", đặt tên (ví dụ: "GitHub Actions Deploy"), chọn Scope phù hợp.
+#    - Copy Token và thêm vào GitHub Secret: VERCEL_TOKEN
+#
+# 2. VERCEL_ORG_ID & VERCEL_PROJECT_ID:
+#    - Cách 1 (qua Vercel Dashboard):
+#      + Vào project trên Vercel -> Settings -> General -> Copy "Project ID".
+#      + Vào Account/Team Settings -> General -> Copy "Team ID" (hoặc Org ID).
+#    - Cách 2 (qua CLI):
+#      + Chạy lệnh `npx vercel link` trong thư mục dự án trên máy.
+#      + Mở file `.vercel/project.json` để lấy `"orgId"` và `"projectId"`.
+#    - Thêm 2 secret tương ứng vào GitHub: VERCEL_ORG_ID và VERCEL_PROJECT_ID
+#
+# 3. NEXT_PUBLIC_GOOGLE_CLIENT_ID (Tuỳ chọn):
+#    - Thêm Client ID Google OAuth nếu muốn build với credentials thật.
+# ==============================================================================
+
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ────────────────────────────────────────────────────────────────────────────
+  # 1. Job: Build, Lint & Type Check (chạy trên MỌI push và PR vào main)
+  # ────────────────────────────────────────────────────────────────────────────
+  build-and-test:
+    name: Build & Lint Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run Next.js Build
+        env:
+          NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ secrets.NEXT_PUBLIC_GOOGLE_CLIENT_ID || 'placeholder-id' }}
+        run: npm run build
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # 2. Job: Deploy to Vercel (CHỈ chạy khi push vào main VÀ build-and-test đã pass)
+  # ────────────────────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to Production (Vercel)
+    needs: build-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull Vercel Environment Information
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Build Project Artifacts for Vercel
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Deploy Project Artifacts to Vercel Production
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
