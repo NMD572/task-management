@@ -3,14 +3,16 @@
 import { useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Search, Globe, Plus, X, Settings } from 'lucide-react';
+import { Search, Globe, Plus, X, Settings, CheckSquare } from 'lucide-react';
 import TaskModal from '@/components/task/TaskModal';
 import GoogleLoginButton from '@/components/auth/GoogleLoginButton';
 import { useFilter } from '@/lib/filterContext';
 
 export default function Header() {
   const pathname = usePathname();
+  const isHomePage = pathname === '/';
   const isSettingsPage = pathname === '/settings';
+  const isCompletedPage = pathname === '/completed';
 
   const [modalOpen, setModalOpen] = useState(false);
   const { searchText, setSearchText } = useFilter();
@@ -56,9 +58,9 @@ export default function Header() {
             </span>
           </Link>
 
-          {/* ── Search bar (shown on matrix view, simplified on other pages) ── */}
+          {/* ── Search bar (shown on home matrix view, spacer on other pages) ── */}
           <div className="flex-1 min-w-0">
-            {!isSettingsPage ? (
+            {isHomePage ? (
               <div className="relative">
                 <Search
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
@@ -98,6 +100,20 @@ export default function Header() {
               <Plus size={16} />
               <span className="hidden sm:inline">Thêm task</span>
             </button>
+
+            {/* Completed tasks history link */}
+            <Link
+              href="/completed"
+              title="Lịch sử task đã hoàn thành & bỏ qua"
+              className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-sm font-medium transition ${
+                isCompletedPage
+                  ? 'border-do_now bg-teal-50 text-do_now'
+                  : 'border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+              }`}
+            >
+              <CheckSquare size={16} />
+              <span className="hidden md:inline">Đã xử lý</span>
+            </Link>
 
             {/* Language toggle placeholder */}
             <button

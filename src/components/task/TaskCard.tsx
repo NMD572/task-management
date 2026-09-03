@@ -106,9 +106,9 @@ export default function TaskCard({ task }: TaskCardProps) {
       <div
         className={`group bg-white rounded-xl border shadow-sm px-4 py-3 flex flex-col gap-2.5 hover:shadow-md transition-all ${
           isCompletedToday
-            ? 'border-emerald-200 bg-emerald-50/20'
+            ? 'border-emerald-200 bg-emerald-50/20 opacity-60 hover:opacity-100'
             : isSkippedToday
-            ? 'border-amber-200 bg-amber-50/20'
+            ? 'border-gray-200 bg-gray-50/60 opacity-60 hover:opacity-100'
             : 'border-gray-200'
         }`}
       >
