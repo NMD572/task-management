@@ -23,11 +23,14 @@ export interface Task {
   createdAt: string;                  // ISO, tự sinh
 }
 
-// Lịch sử hoàn thành theo từng ngày — entity mới, cần cho view tạo động lực (1.5.7)
+export type TaskCompletionStatus = 'completed' | 'skipped';
+
+// Lịch sử hoàn thành theo từng ngày — entity mới, cần cho view tạo động lực (1.5.7) và trang Completed Tasks
 export interface TaskCompletion {
   taskId: string;
-  date: string;      // YYYY-MM-DD
-  completed: boolean;
+  date: string;                       // YYYY-MM-DD
+  status: TaskCompletionStatus;       // 'completed' | 'skipped'
+  note?: string;                      // ghi chú chi tiết không bắt buộc
 }
 
 export interface NotificationConfig {

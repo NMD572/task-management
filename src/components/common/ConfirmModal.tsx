@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, ReactNode } from 'react';
-import { X, AlertTriangle, Trash2 } from 'lucide-react';
+import { X, Trash2, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export interface ConfirmModalProps {
   isOpen: boolean;
@@ -52,7 +52,31 @@ export default function ConfirmModal({
 
   if (!isOpen) return null;
 
-  const isDanger = variant === 'danger';
+  const getVariantStyles = () => {
+    switch (variant) {
+      case 'danger':
+        return {
+          icon: <Trash2 size={16} />,
+          iconBg: 'bg-red-50 text-red-600',
+          btnBg: 'bg-red-600 hover:bg-red-700 text-white',
+        };
+      case 'warning':
+        return {
+          icon: <AlertCircle size={16} />,
+          iconBg: 'bg-amber-50 text-amber-600',
+          btnBg: 'bg-amber-600 hover:bg-amber-700 text-white',
+        };
+      case 'primary':
+      default:
+        return {
+          icon: <CheckCircle2 size={16} />,
+          iconBg: 'bg-teal-50 text-do_now',
+          btnBg: 'bg-do_now hover:bg-teal-600 text-white',
+        };
+    }
+  };
+
+  const vStyle = getVariantStyles();
 
   return (
     /* Backdrop */
@@ -76,13 +100,9 @@ export default function ConfirmModal({
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div className="flex items-center gap-2.5">
             <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                isDanger
-                  ? 'bg-red-50 text-red-600'
-                  : 'bg-teal-50 text-do_now'
-              }`}
+              className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${vStyle.iconBg}`}
             >
-              {isDanger ? <Trash2 size={16} /> : <AlertTriangle size={16} />}
+              {vStyle.icon}
             </div>
             <h2 className="text-base font-semibold text-gray-800">{title}</h2>
           </div>
@@ -117,11 +137,7 @@ export default function ConfirmModal({
               onConfirm();
               onClose();
             }}
-            className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition shadow-sm ${
-              isDanger
-                ? 'bg-red-600 hover:bg-red-700'
-                : 'bg-do_now hover:bg-teal-600'
-            }`}
+            className={`rounded-lg px-4 py-2 text-sm font-medium transition shadow-sm ${vStyle.btnBg}`}
           >
             {confirmText}
           </button>
