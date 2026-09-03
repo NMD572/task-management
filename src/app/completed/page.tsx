@@ -47,7 +47,7 @@ function CompletedTasksContent() {
 
           <span className="inline-flex items-center gap-1 text-xs font-semibold text-gray-600 bg-white px-3 py-1.5 rounded-full border border-gray-200 shadow-xs">
             <History size={13} className="text-do_now" />
-            {sortedCompletions.length} lượt đã xử lý
+            {sortedCompletions.length} công việc đã xử lý
           </span>
         </div>
 
@@ -109,7 +109,7 @@ function CompletedTasksContent() {
                           Hoàn thành
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-gray-100 text-gray-600 border border-gray-200">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
                           <Ban size={12} />
                           Bỏ qua
                         </span>

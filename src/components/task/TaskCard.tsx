@@ -211,12 +211,12 @@ export default function TaskCard({ task }: TaskCardProps) {
               {isCompletedToday ? (
                 <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs font-medium text-emerald-700">
                   <Check size={12} strokeWidth={2.5} />
-                  Đã hoàn thành
+                  Hoàn thành
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 border border-amber-200 px-2 py-0.5 text-xs font-medium text-amber-700">
                   <Ban size={12} />
-                  Đã bỏ qua
+                  Bỏ qua
                 </span>
               )}
 
@@ -246,7 +246,7 @@ export default function TaskCard({ task }: TaskCardProps) {
               <button
                 type="button"
                 onClick={() => handleOpenCompletionModal('skipped')}
-                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 hover:bg-amber-50 hover:border-amber-200 hover:text-amber-700 text-gray-600 px-2.5 py-1.5 text-xs font-medium transition"
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50/80 hover:bg-amber-100 text-amber-700 px-2.5 py-1.5 text-xs font-semibold transition shadow-xs"
               >
                 <Ban size={13} />
                 Bỏ qua
