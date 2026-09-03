@@ -160,7 +160,7 @@ export default function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
           value={values.description}
           onChange={(e) => set('description', e.target.value)}
           placeholder="Mô tả thêm về task (không bắt buộc)"
-          className={`${inputCls()} resize-none`}
+          className={`${inputCls()} resize-y min-h-[80px]`}
         />
       </div>
 

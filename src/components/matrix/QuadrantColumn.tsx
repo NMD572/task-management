@@ -49,9 +49,9 @@ export default function QuadrantColumn({ classification, tasks }: QuadrantColumn
   const meta = QUADRANT_META[classification];
 
   return (
-    <div className={`flex flex-col rounded-2xl border-2 ${meta.borderColor} bg-white overflow-hidden`}>
-      {/* ── Column header ── */}
-      <div className={`${meta.headerBg} px-4 py-3 flex items-center justify-between`}>
+    <div className={`flex flex-col rounded-2xl border-2 ${meta.borderColor} bg-white shadow-xs overflow-hidden`}>
+      {/* ── Column header (sticky top) ── */}
+      <div className={`${meta.headerBg} px-4 py-3 flex items-center justify-between sticky top-0 z-10 shrink-0`}>
         <div>
           <h2 className="text-sm font-bold text-white leading-tight">{meta.title}</h2>
           <p className="text-xs text-white/80 mt-0.5">{meta.subtitle}</p>
@@ -62,8 +62,8 @@ export default function QuadrantColumn({ classification, tasks }: QuadrantColumn
         </span>
       </div>
 
-      {/* ── Task list ── */}
-      <div className="flex-1 p-3 flex flex-col gap-2 min-h-[160px]">
+      {/* ── Task list (fixed max-height with scrollbar) ── */}
+      <div className="flex-1 p-3 flex flex-col gap-2 min-h-[180px] max-h-[420px] overflow-y-auto">
         {tasks.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center py-6 text-gray-400">
             <p className="text-sm">Chưa có task nào</p>

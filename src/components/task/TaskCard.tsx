@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { Pencil, Trash2, CalendarDays, Tag, Check, Repeat } from 'lucide-react';
 import TaskModal from './TaskModal';
+import ConfirmModal from '@/components/common/ConfirmModal';
 import { useAppStore } from '@/lib/store';
 import { generateNextOccurrence } from '@/lib/recurring';
 import type { Task } from '@/lib/types';
@@ -14,6 +15,8 @@ interface TaskCardProps {
 
 export default function TaskCard({ task }: TaskCardProps) {
   const [editOpen, setEditOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+
   const labels               = useAppStore((s) => s.labels);
   const deleteTask           = useAppStore((s) => s.deleteTask);
   const updateTask           = useAppStore((s) => s.updateTask);
@@ -64,10 +67,8 @@ export default function TaskCard({ task }: TaskCardProps) {
     }
   }
 
-  function handleDelete() {
-    if (confirm(`Xoá task "${task.name}"?`)) {
-      deleteTask(task.id);
-    }
+  function handleConfirmDelete() {
+    deleteTask(task.id);
   }
 
   return (
@@ -166,7 +167,7 @@ export default function TaskCard({ task }: TaskCardProps) {
           </button>
           <button
             type="button"
-            onClick={handleDelete}
+            onClick={() => setDeleteModalOpen(true)}
             aria-label="Xoá task"
             title="Xoá task"
             className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 transition"
@@ -181,6 +182,24 @@ export default function TaskCard({ task }: TaskCardProps) {
         task={task}
         isOpen={editOpen}
         onClose={() => setEditOpen(false)}
+      />
+
+      {/* Delete confirmation modal */}
+      <ConfirmModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Xoá task"
+        variant="danger"
+        confirmText="Xoá task"
+        cancelText="Huỷ"
+        message={
+          <p className="text-gray-600">
+            Bạn có chắc chắn muốn xoá task{' '}
+            <strong className="text-gray-900 font-semibold">&ldquo;{task.name}&rdquo;</strong> không?
+            Hành động này không thể hoàn tác.
+          </p>
+        }
       />
     </>
   );
