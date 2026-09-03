@@ -58,7 +58,7 @@ interface AppState {
   deleteTask: (id: string) => void;
 
   // Label actions
-  addLabel: (label: Omit<Label, 'id'>) => void;
+  addLabel: (label: Omit<Label, 'id'> | Label) => string;
   updateLabel: (id: string, updates: Partial<Omit<Label, 'id'>>) => void;
   deleteLabel: (id: string) => void;
 
@@ -117,16 +117,19 @@ export const useAppStore = create<AppState>()(
         })),
 
       // ── Label actions ──
-      addLabel: (labelData) =>
+      addLabel: (labelData) => {
+        const id = 'id' in labelData && labelData.id ? labelData.id : generateId();
         set((state) => ({
           labels: [
             ...state.labels,
             {
               ...labelData,
-              id: generateId(),
+              id,
             },
           ],
-        })),
+        }));
+        return id;
+      },
 
       updateLabel: (id, updates) =>
         set((state) => ({
@@ -136,9 +139,19 @@ export const useAppStore = create<AppState>()(
         })),
 
       deleteLabel: (id) =>
-        set((state) => ({
-          labels: state.labels.filter((label) => label.id !== id),
-        })),
+        set((state) => {
+          const defaultLabelId =
+            state.labels.find((l) => l.isDefault && l.name === 'Cá nhân')?.id ||
+            state.labels.find((l) => l.isDefault)?.id ||
+            'label-1';
+
+          return {
+            labels: state.labels.filter((label) => label.id !== id),
+            tasks: state.tasks.map((task) =>
+              task.labelId === id ? { ...task, labelId: defaultLabelId } : task
+            ),
+          };
+        }),
 
       // ── TaskCompletion actions ──
       addTaskCompletion: (completion) =>

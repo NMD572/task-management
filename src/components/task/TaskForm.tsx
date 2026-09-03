@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { format } from 'date-fns';
+import { Plus, X, Tag } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import type { Classification, Task } from '@/lib/types';
 
@@ -32,6 +33,17 @@ const CLASSIFICATION_OPTIONS: { value: Classification; label: string; color: str
 
 const UNSELECTED_CLS = 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-50';
 
+const PRESET_LABEL_COLORS = [
+  '#3B82F6', // Blue
+  '#10B981', // Emerald
+  '#F59E0B', // Amber
+  '#EC4899', // Pink
+  '#7C3AED', // Purple
+  '#14B8A6', // Teal
+  '#EF4444', // Red
+  '#6366F1', // Indigo
+];
+
 // ── Form initial values ────────────────────────────────────────────────────
 function getInitialValues(task?: Task) {
   const today = format(new Date(), 'yyyy-MM-dd');
@@ -53,9 +65,16 @@ export default function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
   const labels     = useAppStore((s) => s.labels);
   const addTask    = useAppStore((s) => s.addTask);
   const updateTask = useAppStore((s) => s.updateTask);
+  const addLabel   = useAppStore((s) => s.addLabel);
 
   const [values, setValues] = useState(getInitialValues(task));
   const [errors, setErrors] = useState<FormErrors>({});
+
+  // ── Inline Custom Label State ──
+  const [showCreateLabel, setShowCreateLabel] = useState(false);
+  const [newLabelName, setNewLabelName] = useState('');
+  const [newLabelColor, setNewLabelColor] = useState(PRESET_LABEL_COLORS[0]);
+  const [newLabelError, setNewLabelError] = useState('');
 
   // ── Helpers ──
   const set = <K extends keyof typeof values>(key: K, val: (typeof values)[K]) =>
@@ -94,6 +113,42 @@ export default function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
 
     setErrors(errs);
     return Object.keys(errs).length === 0;
+  }
+
+  // ── Handle Custom Label Creation ──
+  function handleCreateCustomLabel() {
+    const trimmed = newLabelName.trim();
+    if (!trimmed) {
+      setNewLabelError('Tên nhãn không được để trống.');
+      return;
+    }
+    if (trimmed.length > 255) {
+      setNewLabelError('Tên nhãn tối đa 255 ký tự.');
+      return;
+    }
+
+    // Case-insensitive duplicate check
+    const isDuplicate = labels.some(
+      (l) => l.name.trim().toLowerCase() === trimmed.toLowerCase()
+    );
+    if (isDuplicate) {
+      setNewLabelError('Tên nhãn này đã tồn tại.');
+      return;
+    }
+
+    const createdId = addLabel({
+      name: trimmed,
+      color: newLabelColor,
+      isDefault: false,
+    });
+
+    set('labelId', createdId);
+    setShowCreateLabel(false);
+    setNewLabelName('');
+    setNewLabelError('');
+    if (errors.labelId) {
+      setErrors((prev) => ({ ...prev, labelId: undefined }));
+    }
   }
 
   // ── Submit ──
@@ -194,22 +249,142 @@ export default function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
 
       {/* ── Label ── */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Nhãn <span className="text-red-500">*</span>
-        </label>
+        <div className="flex items-center justify-between mb-1">
+          <label className="block text-sm font-medium text-gray-700">
+            Nhãn <span className="text-red-500">*</span>
+          </label>
+          {!showCreateLabel && (
+            <button
+              type="button"
+              onClick={() => {
+                setShowCreateLabel(true);
+                setNewLabelName('');
+                setNewLabelError('');
+              }}
+              className="text-xs text-do_now hover:underline font-medium flex items-center gap-1"
+            >
+              <Plus size={13} />
+              Tạo nhãn mới
+            </button>
+          )}
+        </div>
+
         <select
           value={values.labelId}
-          onChange={(e) => set('labelId', e.target.value)}
+          onChange={(e) => {
+            if (e.target.value === '__create_new__') {
+              setShowCreateLabel(true);
+            } else {
+              set('labelId', e.target.value);
+            }
+          }}
           className={inputCls(errors.labelId)}
         >
           <option value="">— Chọn nhãn —</option>
           {labels.map((lbl) => (
             <option key={lbl.id} value={lbl.id}>
-              {lbl.name}
+              {lbl.name} {lbl.isDefault ? '' : '(Tuỳ chỉnh)'}
             </option>
           ))}
+          <option value="__create_new__" className="text-do_now font-semibold">
+            ➕ Tạo nhãn mới...
+          </option>
         </select>
         {errors.labelId && <p className="mt-1 text-xs text-red-500">{errors.labelId}</p>}
+
+        {/* Inline Create Label Form */}
+        {showCreateLabel && (
+          <div className="mt-3 p-4 bg-gray-50 rounded-xl border border-gray-200 flex flex-col gap-3 animate-in fade-in duration-150">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-gray-800 flex items-center gap-1.5">
+                <Tag size={13} className="text-do_now" />
+                Tạo nhãn tuỳ chỉnh mới
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCreateLabel(false);
+                  setNewLabelName('');
+                  setNewLabelError('');
+                }}
+                className="text-gray-400 hover:text-gray-600 rounded p-0.5"
+                title="Đóng"
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            {/* Label Name Input */}
+            <div>
+              <input
+                type="text"
+                maxLength={255}
+                placeholder="Nhập tên nhãn (VD: Dự án Alpha)"
+                value={newLabelName}
+                onChange={(e) => {
+                  setNewLabelName(e.target.value);
+                  if (newLabelError) setNewLabelError('');
+                }}
+                className={`w-full rounded-lg border bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-1 ${
+                  newLabelError
+                    ? 'border-red-400 focus:ring-red-400'
+                    : 'border-gray-300 focus:border-do_now focus:ring-do_now'
+                }`}
+              />
+              {newLabelError && <p className="text-xs text-red-500 mt-1">{newLabelError}</p>}
+            </div>
+
+            {/* Color selection */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-medium text-gray-600 shrink-0">Màu sắc:</span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {PRESET_LABEL_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setNewLabelColor(c)}
+                    className={`w-5 h-5 rounded-full border-2 transition-transform ${
+                      newLabelColor === c ? 'scale-125 border-gray-900 shadow-sm' : 'border-transparent hover:scale-110'
+                    }`}
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+
+                {/* Color input */}
+                <div className="relative w-5 h-5 rounded-full overflow-hidden border border-gray-300 cursor-pointer ml-1" title="Tự chọn màu khác">
+                  <input
+                    type="color"
+                    value={newLabelColor}
+                    onChange={(e) => setNewLabelColor(e.target.value)}
+                    className="absolute -top-2 -left-2 w-9 h-9 cursor-pointer border-0 p-0"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-end gap-2 pt-1 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCreateLabel(false);
+                  setNewLabelName('');
+                  setNewLabelError('');
+                }}
+                className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 rounded-lg transition"
+              >
+                Huỷ
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateCustomLabel}
+                className="px-3 py-1.5 text-xs font-medium text-white bg-do_now hover:bg-teal-600 rounded-lg transition shadow-xs"
+              >
+                Lưu nhãn
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Classification segmented control ── */}

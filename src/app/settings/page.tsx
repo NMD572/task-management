@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import {
   Bell,
@@ -10,11 +10,14 @@ import {
   Layers,
   Info,
   CheckCircle2,
+  Tag,
+  Trash2,
 } from 'lucide-react';
 import Header from '@/components/layout/Header';
+import ConfirmModal from '@/components/common/ConfirmModal';
 import { FilterProvider } from '@/lib/filterContext';
 import { useAppStore } from '@/lib/store';
-import type { Classification } from '@/lib/types';
+import type { Classification, Label } from '@/lib/types';
 
 // ── Quadrant Info ──────────────────────────────────────────────────────────
 const QUADRANTS: {
@@ -52,6 +55,13 @@ const QUADRANTS: {
 function SettingsContent() {
   const notificationConfig       = useAppStore((s) => s.notificationConfig);
   const updateNotificationConfig = useAppStore((s) => s.updateNotificationConfig);
+  const labels                   = useAppStore((s) => s.labels);
+  const tasks                    = useAppStore((s) => s.tasks);
+  const deleteLabel              = useAppStore((s) => s.deleteLabel);
+
+  const [labelToDelete, setLabelToDelete] = useState<Label | null>(null);
+
+  const customLabels = labels.filter((l) => !l.isDefault);
 
   const { generalEnabled, perQuadrant, reminderDays, notifyFromTime, notifyToTime } =
     notificationConfig;
@@ -70,6 +80,17 @@ function SettingsContent() {
       },
     });
   };
+
+  function handleConfirmDeleteLabel() {
+    if (labelToDelete) {
+      deleteLabel(labelToDelete.id);
+      setLabelToDelete(null);
+    }
+  }
+
+  const labelUsageCount = labelToDelete
+    ? tasks.filter((t) => t.labelId === labelToDelete.id).length
+    : 0;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -98,9 +119,9 @@ function SettingsContent() {
               <Bell size={20} />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Cài đặt Thông báo</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Cài đặt</h1>
               <p className="text-sm text-gray-500 mt-0.5">
-                Quản lý cách thức và thời điểm ứng dụng nhắc nhở công việc cho bạn
+                Quản lý thông báo và các nhãn công việc tuỳ chỉnh
               </p>
             </div>
           </div>
@@ -108,7 +129,7 @@ function SettingsContent() {
 
         <div className="space-y-6">
           {/* ══════════════════════════════════════════════════════════════════
-              1. SECTION: CƠ BẢN
+              1. SECTION: CƠ BẢN (THÔNG BÁO TỔNG QUÁT)
           ══════════════════════════════════════════════════════════════════ */}
           <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
             <div className="flex items-center justify-between gap-4">
@@ -141,7 +162,7 @@ function SettingsContent() {
           </section>
 
           {/* ══════════════════════════════════════════════════════════════════
-              2. SECTION: NÂNG CAO (Chỉ hiện / thao tác khi generalEnabled = true)
+              2. SECTION: NÂNG CAO (THÔNG BÁO CHI TIẾT)
           ══════════════════════════════════════════════════════════════════ */}
           <section
             className={`bg-white rounded-2xl border border-gray-200 shadow-sm p-6 transition-all ${
@@ -151,7 +172,7 @@ function SettingsContent() {
             <div className="border-b border-gray-100 pb-4 mb-6">
               <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
                 <Layers size={18} className="text-do_now" />
-                Cài đặt Nâng cao
+                Cài đặt Thông báo Nâng cao
               </h2>
               <p className="text-sm text-gray-500 mt-1">
                 Tùy chỉnh chi tiết thông báo theo từng góc phần tư và khung giờ
@@ -305,8 +326,92 @@ function SettingsContent() {
               </div>
             </div>
           </section>
+
+          {/* ══════════════════════════════════════════════════════════════════
+              3. SECTION: QUẢN LÝ NHÃN TUỲ CHỈNH (CUSTOM LABELS)
+          ══════════════════════════════════════════════════════════════════ */}
+          <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+            <div className="border-b border-gray-100 pb-4 mb-5 flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+                  <Tag size={18} className="text-do_now" />
+                  Nhãn tuỳ chỉnh
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  Danh sách các nhãn do bạn tạo thêm. Khi xoá, các task liên quan sẽ chuyển về nhãn &quot;Cá nhân&quot;.
+                </p>
+              </div>
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 shrink-0">
+                {customLabels.length} nhãn
+              </span>
+            </div>
+
+            {customLabels.length === 0 ? (
+              <div className="py-8 text-center text-gray-400 text-sm">
+                <p>Chưa có nhãn tuỳ chỉnh nào.</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  Bạn có thể tạo nhãn mới trực tiếp từ form tạo/sửa task.
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {customLabels.map((lbl) => {
+                  const usageCount = tasks.filter((t) => t.labelId === lbl.id).length;
+                  return (
+                    <div key={lbl.id} className="py-3 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <span
+                          className="w-4 h-4 rounded-full shrink-0 shadow-xs ring-1 ring-black/10"
+                          style={{ backgroundColor: lbl.color }}
+                        />
+                        <span className="text-sm font-medium text-gray-800">{lbl.name}</span>
+                        <span className="text-xs text-gray-400">
+                          ({usageCount} task{usageCount !== 1 ? 's' : ''})
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setLabelToDelete(lbl)}
+                        aria-label={`Xoá nhãn ${lbl.name}`}
+                        title="Xoá nhãn"
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
         </div>
       </main>
+
+      {/* ── Confirm Delete Label Modal ── */}
+      <ConfirmModal
+        isOpen={!!labelToDelete}
+        onClose={() => setLabelToDelete(null)}
+        onConfirm={handleConfirmDeleteLabel}
+        title="Xoá nhãn tuỳ chỉnh"
+        variant="danger"
+        confirmText="Xoá nhãn"
+        cancelText="Huỷ"
+        message={
+          <p className="text-gray-600">
+            Bạn có chắc chắn muốn xoá nhãn{' '}
+            <strong className="text-gray-900 font-semibold">&ldquo;{labelToDelete?.name}&rdquo;</strong>?{' '}
+            {labelUsageCount > 0 ? (
+              <span>
+                Hiện có <strong className="text-gray-900 font-semibold">{labelUsageCount} task</strong> đang
+                sử dụng nhãn này và sẽ tự động được chuyển về nhãn mặc định &ldquo;Cá nhân&rdquo;.
+              </span>
+            ) : (
+              <span>Nhãn này hiện chưa được gán cho task nào.</span>
+            )}
+          </p>
+        }
+      />
     </div>
   );
 }
