@@ -26,13 +26,13 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
-    branches: [main]
+    branches: [master]
 
 jobs:
   # ────────────────────────────────────────────────────────────────────────────
-  # 1. Job: Build, Lint & Type Check (chạy trên MỌI push và PR vào main)
+  # 1. Job: Build, Lint & Type Check (chạy trên MỌI push và PR vào master)
   # ────────────────────────────────────────────────────────────────────────────
   build-and-test:
     name: Build & Lint Check
@@ -60,12 +60,12 @@ jobs:
         run: npm run build
 
   # ────────────────────────────────────────────────────────────────────────────
-  # 2. Job: Deploy to Vercel (CHỈ chạy khi push vào main VÀ build-and-test đã pass)
+  # 2. Job: Deploy to Vercel (CHỈ chạy khi push vào master VÀ build-and-test đã pass)
   # ────────────────────────────────────────────────────────────────────────────
   deploy:
     name: Deploy to Production (Vercel)
     needs: build-and-test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
 
     steps:
