@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import TaskModal from './TaskModal';
 import ConfirmModal from '@/components/common/ConfirmModal';
+import UnsavedChangesModal from '@/components/common/UnsavedChangesModal';
 import { useAppStore } from '@/lib/store';
 import { generateNextOccurrence } from '@/lib/recurring';
 import type { Task, TaskCompletionStatus } from '@/lib/types';
@@ -33,6 +34,7 @@ export default function TaskCard({ task }: TaskCardProps) {
     status: TaskCompletionStatus;
   } | null>(null);
   const [completionNote, setCompletionNote] = useState('');
+  const [showCompletionDiscardConfirm, setShowCompletionDiscardConfirm] = useState(false);
 
   const labels               = useAppStore((s) => s.labels);
   const deleteTask           = useAppStore((s) => s.deleteTask);
@@ -66,6 +68,15 @@ export default function TaskCard({ task }: TaskCardProps) {
   function handleOpenCompletionModal(status: TaskCompletionStatus) {
     setCompletionModal({ open: true, status });
     setCompletionNote('');
+  }
+
+  function handleRequestCloseCompletion() {
+    if (completionNote.trim().length > 0) {
+      setShowCompletionDiscardConfirm(true);
+    } else {
+      setCompletionModal(null);
+      setCompletionNote('');
+    }
   }
 
   function handleConfirmCompletion() {
@@ -211,12 +222,12 @@ export default function TaskCard({ task }: TaskCardProps) {
               {isCompletedToday ? (
                 <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs font-medium text-emerald-700">
                   <Check size={12} strokeWidth={2.5} />
-                  Hoàn thành
+                  Đã hoàn thành
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 border border-amber-200 px-2 py-0.5 text-xs font-medium text-amber-700">
                   <Ban size={12} />
-                  Bỏ qua
+                  Đã bỏ qua
                 </span>
               )}
 
@@ -263,7 +274,7 @@ export default function TaskCard({ task }: TaskCardProps) {
         onClose={() => setEditOpen(false)}
       />
 
-      {/* Delete confirmation modal */}
+      {/* Delete confirmation modal (prompt 9: purely a confirmation step, no unsaved changes prompt) */}
       <ConfirmModal
         isOpen={deleteModalOpen}
         onClose={() => setDeleteModalOpen(false)}
@@ -284,10 +295,7 @@ export default function TaskCard({ task }: TaskCardProps) {
       {/* Complete / Skip confirmation modal with optional note */}
       <ConfirmModal
         isOpen={!!completionModal}
-        onClose={() => {
-          setCompletionModal(null);
-          setCompletionNote('');
-        }}
+        onClose={handleRequestCloseCompletion}
         onConfirm={handleConfirmCompletion}
         title={
           completionModal?.status === 'completed'
@@ -336,6 +344,19 @@ export default function TaskCard({ task }: TaskCardProps) {
           />
         </div>
       </ConfirmModal>
+
+      {/* Discard completion note confirmation modal */}
+      <UnsavedChangesModal
+        isOpen={showCompletionDiscardConfirm}
+        onContinue={() => setShowCompletionDiscardConfirm(false)}
+        onDiscard={() => {
+          setShowCompletionDiscardConfirm(false);
+          setCompletionModal(null);
+          setCompletionNote('');
+        }}
+        title="Huỷ ghi chú?"
+        message="Nội dung ghi chú bạn đang nhập sẽ bị mất. Bạn có chắc muốn huỷ không?"
+      />
     </>
   );
 }
