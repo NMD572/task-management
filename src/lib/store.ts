@@ -28,8 +28,7 @@ const DEFAULT_NOTIFICATION_CONFIG: NotificationConfig = {
     eliminate: false,
   },
   reminderDays: 2,
-  notifyFromTime: undefined,
-  notifyToTime: undefined,
+  timeWindows: [],
 };
 
 const DEFAULT_URGENCY_CONFIG: UrgencyAutoUpgradeConfig = {
@@ -184,7 +183,14 @@ export const useAppStore = create<AppState>()(
       // ── Config actions ──
       updateNotificationConfig: (config) =>
         set((state) => ({
-          notificationConfig: { ...state.notificationConfig, ...config },
+          notificationConfig: {
+            ...state.notificationConfig,
+            ...config,
+            timeWindows:
+              config.timeWindows ??
+              state.notificationConfig?.timeWindows ??
+              [],
+          },
         })),
 
       updateUrgencyConfig: (config) =>

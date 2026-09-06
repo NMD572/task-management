@@ -33,17 +33,22 @@ export interface TaskCompletion {
   note?: string;                      // ghi chú chi tiết không bắt buộc
 }
 
+export interface NotificationTimeWindow {
+  id: string;
+  fromTime: string;                   // "HH:mm"
+  toTime: string;                     // "HH:mm"
+}
+
 export interface NotificationConfig {
-  generalEnabled: boolean; // config cơ bản: bật/tắt tổng quát
+  generalEnabled: boolean;            // config cơ bản: bật/tắt tổng quát
   perQuadrant: Record<Classification, boolean>; // default: do_now/schedule/delegate = true, eliminate = false
-  reminderDays: number;     // default 2. Công thức: deadline - hôm nay <= reminderDays thì nhắc
-  notifyFromTime?: string;  // "HH:mm"
-  notifyToTime?: string;    // "HH:mm"
+  reminderDays: number;               // default 2. Công thức: deadline - hôm nay <= reminderDays thì nhắc
+  timeWindows: NotificationTimeWindow[]; // danh sách các khung giờ hiển thị thông báo
 }
 
 export interface UrgencyAutoUpgradeConfig {
   enabled: boolean;
-  daysThreshold: number; // khi (deadline - hôm nay) <= giá trị này, tự nâng not-urgent -> urgent
+  daysThreshold: number;              // khi (deadline - hôm nay) <= giá trị này, tự nâng not-urgent -> urgent
 }
 
 // Chỉ lưu ở client, không có server session thật

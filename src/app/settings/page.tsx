@@ -12,12 +12,15 @@ import {
   CheckCircle2,
   Tag,
   Trash2,
+  Plus,
+  X,
 } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import ConfirmModal from '@/components/common/ConfirmModal';
 import { FilterProvider } from '@/lib/filterContext';
 import { useAppStore } from '@/lib/store';
-import type { Classification, Label } from '@/lib/types';
+import { validateTimeWindow } from '@/lib/notification';
+import type { Classification, Label, NotificationTimeWindow } from '@/lib/types';
 
 // ── Quadrant Info ──────────────────────────────────────────────────────────
 const QUADRANTS: {
@@ -61,10 +64,16 @@ function SettingsContent() {
 
   const [labelToDelete, setLabelToDelete] = useState<Label | null>(null);
 
+  // Time window add form state
+  const [showAddTimeWindow, setShowAddTimeWindow] = useState(false);
+  const [newFromTime, setNewFromTime] = useState('08:00');
+  const [newToTime, setNewToTime] = useState('17:00');
+  const [timeWindowError, setTimeWindowError] = useState('');
+
   const customLabels = labels.filter((l) => !l.isDefault);
 
-  const { generalEnabled, perQuadrant, reminderDays, notifyFromTime, notifyToTime } =
-    notificationConfig;
+  const { generalEnabled, perQuadrant, reminderDays } = notificationConfig;
+  const timeWindows: NotificationTimeWindow[] = notificationConfig.timeWindows || [];
 
   // Toggle general notifications
   const handleToggleGeneral = () => {
@@ -78,6 +87,35 @@ function SettingsContent() {
         ...perQuadrant,
         [quadrant]: !perQuadrant[quadrant],
       },
+    });
+  };
+
+  // Add time window
+  const handleAddTimeWindow = () => {
+    const validation = validateTimeWindow(newFromTime, newToTime);
+    if (!validation.isValid) {
+      setTimeWindowError(validation.error || 'Giờ không hợp lệ.');
+      return;
+    }
+
+    const newWindow: NotificationTimeWindow = {
+      id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      fromTime: newFromTime,
+      toTime: newToTime,
+    };
+
+    updateNotificationConfig({
+      timeWindows: [...timeWindows, newWindow],
+    });
+
+    setShowAddTimeWindow(false);
+    setTimeWindowError('');
+  };
+
+  // Delete time window
+  const handleDeleteTimeWindow = (id: string) => {
+    updateNotificationConfig({
+      timeWindows: timeWindows.filter((w) => w.id !== id),
     });
   };
 
@@ -267,62 +305,138 @@ function SettingsContent() {
                 </p>
               </div>
 
-              {/* ── C. Time window pickers ── */}
+              {/* ── C. Multiple Time Windows ── */}
               <div className="pt-4 border-t border-gray-100">
-                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
-                  <Clock size={16} className="text-gray-400" />
-                  Khung giờ hiển thị thông báo
-                </label>
-                <p className="text-xs text-gray-500 mb-3">
-                  Chỉ nhận thông báo nhắc nhở trong khoảng thời gian được chỉ định
-                </p>
-
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-gray-500">Từ</span>
-                    <input
-                      type="time"
-                      value={notifyFromTime ?? ''}
-                      onChange={(e) =>
-                        updateNotificationConfig({
-                          notifyFromTime: e.target.value || undefined,
-                        })
-                      }
-                      className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-do_now focus:outline-none focus:ring-1 focus:ring-do_now transition"
-                    />
-                  </div>
-
-                  <span className="text-gray-400">—</span>
-
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-gray-500">Đến</span>
-                    <input
-                      type="time"
-                      value={notifyToTime ?? ''}
-                      onChange={(e) =>
-                        updateNotificationConfig({
-                          notifyToTime: e.target.value || undefined,
-                        })
-                      }
-                      className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-do_now focus:outline-none focus:ring-1 focus:ring-do_now transition"
-                    />
-                  </div>
-
-                  {(notifyFromTime || notifyToTime) && (
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
+                    <Clock size={16} className="text-gray-400" />
+                    Khung giờ hiển thị thông báo
+                  </label>
+                  {!showAddTimeWindow && (
                     <button
                       type="button"
-                      onClick={() =>
-                        updateNotificationConfig({
-                          notifyFromTime: undefined,
-                          notifyToTime: undefined,
-                        })
-                      }
-                      className="text-xs text-gray-400 hover:text-red-500 underline transition ml-2"
+                      onClick={() => {
+                        setShowAddTimeWindow(true);
+                        setTimeWindowError('');
+                      }}
+                      className="text-xs text-do_now hover:underline font-medium flex items-center gap-1"
                     >
-                      Xóa khung giờ
+                      <Plus size={13} />
+                      Thêm khung giờ
                     </button>
                   )}
                 </div>
+                <p className="text-xs text-gray-500 mb-3 leading-relaxed">
+                  Chỉ nhận thông báo khi thời gian hiện tại nằm trong bất kỳ khung giờ nào dưới đây.
+                  (Cho phép thiết lập nhiều khung giờ không liền nhau, ví dụ: 08:00 — 09:00 và 19:00 — 20:00).
+                </p>
+
+                {/* List of active time windows */}
+                {timeWindows.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50/50 p-4 text-xs text-gray-500 italic text-center">
+                    Chưa thiết lập khung giờ giới hạn nào (thông báo có thể hiển thị bất kỳ lúc nào trong ngày).
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2.5 mb-3">
+                    {timeWindows.map((tw) => (
+                      <div
+                        key={tw.id}
+                        className="inline-flex items-center gap-2 rounded-xl bg-gray-50 border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-800 shadow-xs hover:border-gray-300 transition"
+                      >
+                        <Clock size={13} className="text-do_now shrink-0" />
+                        <span>
+                          {tw.fromTime} — {tw.toTime}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteTimeWindow(tw.id)}
+                          title={`Xoá khung giờ ${tw.fromTime} - ${tw.toTime}`}
+                          aria-label={`Xoá khung giờ ${tw.fromTime} - ${tw.toTime}`}
+                          className="ml-1 rounded-md p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 transition"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Inline Add Time Window Form */}
+                {showAddTimeWindow && (
+                  <div className="mt-3 p-4 bg-gray-50 rounded-xl border border-gray-200 flex flex-col gap-3 max-w-md animate-in fade-in duration-150">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-gray-800 flex items-center gap-1.5">
+                        <Clock size={13} className="text-do_now" />
+                        Thêm khung giờ thông báo mới
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowAddTimeWindow(false);
+                          setTimeWindowError('');
+                        }}
+                        className="text-gray-400 hover:text-gray-600 rounded p-0.5"
+                        title="Đóng"
+                      >
+                        <X size={15} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1">
+                        <label className="block text-[11px] font-medium text-gray-500 mb-1">Từ giờ</label>
+                        <input
+                          type="time"
+                          value={newFromTime}
+                          onChange={(e) => {
+                            setNewFromTime(e.target.value);
+                            if (timeWindowError) setTimeWindowError('');
+                          }}
+                          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-800 focus:border-do_now focus:outline-none focus:ring-1 focus:ring-do_now"
+                        />
+                      </div>
+
+                      <span className="text-gray-400 mt-5">—</span>
+
+                      <div className="flex-1">
+                        <label className="block text-[11px] font-medium text-gray-500 mb-1">Đến giờ</label>
+                        <input
+                          type="time"
+                          value={newToTime}
+                          onChange={(e) => {
+                            setNewToTime(e.target.value);
+                            if (timeWindowError) setTimeWindowError('');
+                          }}
+                          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-800 focus:border-do_now focus:outline-none focus:ring-1 focus:ring-do_now"
+                        />
+                      </div>
+                    </div>
+
+                    {timeWindowError && (
+                      <p className="text-xs text-red-500 mt-0.5">{timeWindowError}</p>
+                    )}
+
+                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-200">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowAddTimeWindow(false);
+                          setTimeWindowError('');
+                        }}
+                        className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 rounded-lg transition"
+                      >
+                        Huỷ
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleAddTimeWindow}
+                        className="px-3.5 py-1.5 text-xs font-semibold text-white bg-do_now hover:bg-teal-600 rounded-lg transition shadow-xs"
+                      >
+                        Lưu khung giờ
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </section>
