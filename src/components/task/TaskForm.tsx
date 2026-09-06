@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { format } from 'date-fns';
-import { Plus, X, Tag } from 'lucide-react';
+import { X, Tag } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
+import UnsavedChangesModal from '@/components/common/UnsavedChangesModal';
 import type { Classification, Task } from '@/lib/types';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -12,6 +13,7 @@ interface TaskFormProps {
   task?: Task;
   onSuccess: () => void;
   onCancel: () => void;
+  onDirtyChange?: (isDirty: boolean) => void;
 }
 
 interface FormErrors {
@@ -61,7 +63,7 @@ function getInitialValues(task?: Task) {
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
-export default function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
+export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: TaskFormProps) {
   const labels     = useAppStore((s) => s.labels);
   const addTask    = useAppStore((s) => s.addTask);
   const updateTask = useAppStore((s) => s.updateTask);
@@ -75,6 +77,28 @@ export default function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
   const [newLabelName, setNewLabelName] = useState('');
   const [newLabelColor, setNewLabelColor] = useState(PRESET_LABEL_COLORS[0]);
   const [newLabelError, setNewLabelError] = useState('');
+  const [showLabelDiscardConfirm, setShowLabelDiscardConfirm] = useState(false);
+
+  // ── Check if form is dirty (different from initial values) ──
+  const isFormDirty = useMemo(() => {
+    const init = getInitialValues(task);
+    return (
+      values.name !== init.name ||
+      values.description !== init.description ||
+      values.startDate !== init.startDate ||
+      values.deadline !== init.deadline ||
+      values.labelId !== init.labelId ||
+      values.classification !== init.classification ||
+      values.isRecurring !== init.isRecurring ||
+      values.recurringIntervalDays !== init.recurringIntervalDays ||
+      values.onlyRepeatWhenPrevDone !== init.onlyRepeatWhenPrevDone ||
+      (showCreateLabel && newLabelName.trim().length > 0)
+    );
+  }, [values, task, showCreateLabel, newLabelName]);
+
+  useEffect(() => {
+    onDirtyChange?.(isFormDirty);
+  }, [isFormDirty, onDirtyChange]);
 
   // ── Helpers ──
   const set = <K extends keyof typeof values>(key: K, val: (typeof values)[K]) =>
@@ -151,6 +175,16 @@ export default function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
     }
   }
 
+  function handleCancelCreateLabel() {
+    if (newLabelName.trim().length > 0) {
+      setShowLabelDiscardConfirm(true);
+    } else {
+      setShowCreateLabel(false);
+      setNewLabelName('');
+      setNewLabelError('');
+    }
+  }
+
   // ── Submit ──
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -188,311 +222,331 @@ export default function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
     }`;
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
-      {/* ── Name ── */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Tên task <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="text"
-          maxLength={255}
-          value={values.name}
-          onChange={(e) => set('name', e.target.value)}
-          placeholder="VD: Viết báo cáo tuần"
-          className={inputCls(errors.name)}
-        />
-        {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
-      </div>
-
-      {/* ── Description ── */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Mô tả
-        </label>
-        <textarea
-          rows={3}
-          value={values.description}
-          onChange={(e) => set('description', e.target.value)}
-          placeholder="Mô tả thêm về task (không bắt buộc)"
-          className={`${inputCls()} resize-y min-h-[80px]`}
-        />
-      </div>
-
-      {/* ── Dates row ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <>
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
+        {/* ── Name ── */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Ngày bắt đầu
+            Tên task <span className="text-red-500">*</span>
           </label>
           <input
-            type="date"
-            value={values.startDate}
-            onChange={(e) => set('startDate', e.target.value)}
-            className={inputCls(errors.startDate)}
+            type="text"
+            maxLength={255}
+            value={values.name}
+            onChange={(e) => {
+              set('name', e.target.value);
+              if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
+            }}
+            placeholder="Nhập tên task..."
+            className={inputCls(errors.name)}
           />
-          {errors.startDate && <p className="mt-1 text-xs text-red-500">{errors.startDate}</p>}
+          {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
         </div>
+
+        {/* ── Description ── */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả</label>
+          <textarea
+            rows={3}
+            value={values.description}
+            onChange={(e) => set('description', e.target.value)}
+            placeholder="Thêm mô tả chi tiết (không bắt buộc)..."
+            className={`${inputCls()} resize-y min-h-[80px]`}
+          />
+        </div>
+
+        {/* ── Start Date & Deadline ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Ngày bắt đầu <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="date"
+              value={values.startDate}
+              onChange={(e) => {
+                set('startDate', e.target.value);
+                if (errors.startDate) setErrors((prev) => ({ ...prev, startDate: undefined }));
+              }}
+              className={inputCls(errors.startDate)}
+            />
+            {errors.startDate && (
+              <p className="mt-1 text-xs text-red-500">{errors.startDate}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Deadline</label>
+            <input
+              type="datetime-local"
+              value={values.deadline}
+              onChange={(e) => {
+                set('deadline', e.target.value);
+                if (errors.deadline) setErrors((prev) => ({ ...prev, deadline: undefined }));
+              }}
+              className={inputCls(errors.deadline)}
+            />
+            {errors.deadline && (
+              <p className="mt-1 text-xs text-red-500">{errors.deadline}</p>
+            )}
+          </div>
+        </div>
+
+        {/* ── Label Selection & Inline Custom Label Creation ── */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Deadline
-          </label>
-          <input
-            type="datetime-local"
-            value={values.deadline}
-            onChange={(e) => set('deadline', e.target.value)}
-            className={inputCls(errors.deadline)}
-          />
-          {errors.deadline && <p className="mt-1 text-xs text-red-500">{errors.deadline}</p>}
-        </div>
-      </div>
-
-      {/* ── Label ── */}
-      <div>
-        <div className="flex items-center justify-between mb-1">
-          <label className="block text-sm font-medium text-gray-700">
             Nhãn <span className="text-red-500">*</span>
           </label>
-          {!showCreateLabel && (
-            <button
-              type="button"
-              onClick={() => {
-                setShowCreateLabel(true);
-                setNewLabelName('');
-                setNewLabelError('');
+          <div className="flex flex-col gap-2">
+            <select
+              value={showCreateLabel ? '__create_new__' : values.labelId}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === '__create_new__') {
+                  setShowCreateLabel(true);
+                  setNewLabelName('');
+                  setNewLabelError('');
+                } else {
+                  setShowCreateLabel(false);
+                  set('labelId', val);
+                  if (errors.labelId) setErrors((prev) => ({ ...prev, labelId: undefined }));
+                }
               }}
-              className="text-xs text-do_now hover:underline font-medium flex items-center gap-1"
+              className={inputCls(errors.labelId)}
             >
-              <Plus size={13} />
-              Tạo nhãn mới
-            </button>
+              <option value="">-- Chọn nhãn --</option>
+              {labels.map((lbl) => (
+                <option key={lbl.id} value={lbl.id}>
+                  {lbl.name} {lbl.isDefault ? '(Mặc định)' : ''}
+                </option>
+              ))}
+              <option value="__create_new__" className="font-semibold text-do_now">
+                + Tạo nhãn mới
+              </option>
+            </select>
+
+            {/* Inline Custom Label Creation Box */}
+            {showCreateLabel && (
+              <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200 flex flex-col gap-3 animate-in fade-in duration-150">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+                    <Tag size={13} className="text-do_now" />
+                    Tạo nhãn tuỳ chỉnh mới
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleCancelCreateLabel}
+                    className="text-gray-400 hover:text-gray-600 rounded p-0.5"
+                    title="Đóng form tạo nhãn"
+                  >
+                    <X size={15} />
+                  </button>
+                </div>
+
+                <div>
+                  <input
+                    type="text"
+                    maxLength={255}
+                    value={newLabelName}
+                    onChange={(e) => {
+                      setNewLabelName(e.target.value);
+                      if (newLabelError) setNewLabelError('');
+                    }}
+                    placeholder="Nhập tên nhãn (ví dụ: Học tập, Dự án X...)"
+                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-800 focus:border-do_now focus:outline-none focus:ring-1 focus:ring-do_now"
+                  />
+                  {newLabelError && (
+                    <p className="mt-1 text-xs text-red-500">{newLabelError}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                    Chọn màu sắc nhãn:
+                  </label>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {PRESET_LABEL_COLORS.map((clr) => (
+                      <button
+                        key={clr}
+                        type="button"
+                        onClick={() => setNewLabelColor(clr)}
+                        style={{ backgroundColor: clr }}
+                        className={`w-6 h-6 rounded-full transition-transform ${
+                          newLabelColor === clr
+                            ? 'scale-125 ring-2 ring-offset-2 ring-gray-400'
+                            : 'hover:scale-110'
+                        }`}
+                      />
+                    ))}
+                    <div className="flex items-center gap-1.5 ml-2">
+                      <input
+                        type="color"
+                        value={newLabelColor}
+                        onChange={(e) => setNewLabelColor(e.target.value)}
+                        className="w-6 h-6 rounded cursor-pointer border-0 p-0 bg-transparent"
+                        title="Tuỳ chỉnh màu khác"
+                      />
+                      <span className="text-[11px] text-gray-500">Màu khác</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-1 border-t border-gray-200">
+                  <button
+                    type="button"
+                    onClick={handleCancelCreateLabel}
+                    className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 rounded-lg transition"
+                  >
+                    Huỷ
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCreateCustomLabel}
+                    className="px-3.5 py-1.5 text-xs font-semibold text-white bg-do_now hover:bg-teal-600 rounded-lg transition shadow-xs"
+                  >
+                    Lưu &amp; chọn nhãn
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+          {errors.labelId && <p className="mt-1 text-xs text-red-500">{errors.labelId}</p>}
+        </div>
+
+        {/* ── Classification ── */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Phân loại Eisenhower <span className="text-red-500">*</span>
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            {CLASSIFICATION_OPTIONS.map((opt) => {
+              const isSelected = values.classification === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => {
+                    set('classification', opt.value);
+                    if (errors.classification) {
+                      setErrors((prev) => ({ ...prev, classification: undefined }));
+                    }
+                  }}
+                  className={`rounded-lg py-2.5 px-3 text-xs font-medium transition ${
+                    isSelected ? opt.color : UNSELECTED_CLS
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+          {errors.classification && (
+            <p className="mt-1 text-xs text-red-500">{errors.classification}</p>
           )}
         </div>
 
-        <select
-          value={values.labelId}
-          onChange={(e) => {
-            if (e.target.value === '__create_new__') {
-              setShowCreateLabel(true);
-            } else {
-              set('labelId', e.target.value);
-            }
-          }}
-          className={inputCls(errors.labelId)}
-        >
-          <option value="">— Chọn nhãn —</option>
-          {labels.map((lbl) => (
-            <option key={lbl.id} value={lbl.id}>
-              {lbl.name} {lbl.isDefault ? '' : '(Tuỳ chỉnh)'}
-            </option>
-          ))}
-          <option value="__create_new__" className="text-do_now font-semibold">
-            ➕ Tạo nhãn mới...
-          </option>
-        </select>
-        {errors.labelId && <p className="mt-1 text-xs text-red-500">{errors.labelId}</p>}
-
-        {/* Inline Create Label Form */}
-        {showCreateLabel && (
-          <div className="mt-3 p-4 bg-gray-50 rounded-xl border border-gray-200 flex flex-col gap-3 animate-in fade-in duration-150">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-gray-800 flex items-center gap-1.5">
-                <Tag size={13} className="text-do_now" />
-                Tạo nhãn tuỳ chỉnh mới
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowCreateLabel(false);
-                  setNewLabelName('');
-                  setNewLabelError('');
-                }}
-                className="text-gray-400 hover:text-gray-600 rounded p-0.5"
-                title="Đóng"
-              >
-                <X size={15} />
-              </button>
-            </div>
-
-            {/* Label Name Input */}
+        {/* ── Recurring Section ── */}
+        <div className="rounded-xl border border-gray-200 p-4 bg-gray-50/50 flex flex-col gap-4">
+          <div className="flex items-center justify-between">
             <div>
-              <input
-                type="text"
-                maxLength={255}
-                placeholder="Nhập tên nhãn (VD: Dự án Alpha)"
-                value={newLabelName}
-                onChange={(e) => {
-                  setNewLabelName(e.target.value);
-                  if (newLabelError) setNewLabelError('');
-                }}
-                className={`w-full rounded-lg border bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-1 ${
-                  newLabelError
-                    ? 'border-red-400 focus:ring-red-400'
-                    : 'border-gray-300 focus:border-do_now focus:ring-do_now'
-                }`}
-              />
-              {newLabelError && <p className="text-xs text-red-500 mt-1">{newLabelError}</p>}
+              <p className="text-sm font-medium text-gray-800">Lặp lại</p>
+              <p className="text-xs text-gray-500">Tự động lặp lại task theo chu kỳ</p>
             </div>
-
-            {/* Color selection */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-medium text-gray-600 shrink-0">Màu sắc:</span>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {PRESET_LABEL_COLORS.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setNewLabelColor(c)}
-                    className={`w-5 h-5 rounded-full border-2 transition-transform ${
-                      newLabelColor === c ? 'scale-125 border-gray-900 shadow-sm' : 'border-transparent hover:scale-110'
-                    }`}
-                    style={{ backgroundColor: c }}
-                  />
-                ))}
-
-                {/* Color input */}
-                <div className="relative w-5 h-5 rounded-full overflow-hidden border border-gray-300 cursor-pointer ml-1" title="Tự chọn màu khác">
-                  <input
-                    type="color"
-                    value={newLabelColor}
-                    onChange={(e) => setNewLabelColor(e.target.value)}
-                    className="absolute -top-2 -left-2 w-9 h-9 cursor-pointer border-0 p-0"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center justify-end gap-2 pt-1 border-t border-gray-200">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowCreateLabel(false);
-                  setNewLabelName('');
-                  setNewLabelError('');
-                }}
-                className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 rounded-lg transition"
-              >
-                Huỷ
-              </button>
-              <button
-                type="button"
-                onClick={handleCreateCustomLabel}
-                className="px-3 py-1.5 text-xs font-medium text-white bg-do_now hover:bg-teal-600 rounded-lg transition shadow-xs"
-              >
-                Lưu nhãn
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ── Classification segmented control ── */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Phân loại <span className="text-red-500">*</span>
-        </label>
-        <div className="grid grid-cols-2 gap-2">
-          {CLASSIFICATION_OPTIONS.map((opt) => (
             <button
-              key={opt.value}
               type="button"
-              onClick={() => set('classification', opt.value)}
-              className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-                values.classification === opt.value ? opt.color : UNSELECTED_CLS
+              role="switch"
+              aria-checked={values.isRecurring}
+              onClick={() => set('isRecurring', !values.isRecurring)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
+                values.isRecurring ? 'bg-do_now' : 'bg-gray-300'
               }`}
             >
-              {opt.label}
+              <span
+                className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                  values.isRecurring ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
             </button>
-          ))}
-        </div>
-        {errors.classification && (
-          <p className="mt-1 text-xs text-red-500">{errors.classification}</p>
-        )}
-      </div>
+          </div>
 
-      {/* ── isRecurring toggle ── */}
-      <div>
-        <div className="flex items-center justify-between">
-          <label className="text-sm font-medium text-gray-700">Task lặp lại</label>
+          {values.isRecurring && (
+            <div className="flex flex-col gap-3 pt-2 border-t border-gray-200 animate-in fade-in duration-200">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Chu kỳ lặp (số ngày) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  value={values.recurringIntervalDays}
+                  onChange={(e) => {
+                    set('recurringIntervalDays', Number(e.target.value));
+                    if (errors.recurringIntervalDays) {
+                      setErrors((prev) => ({ ...prev, recurringIntervalDays: undefined }));
+                    }
+                  }}
+                  className="w-32 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-do_now focus:outline-none focus:ring-1 focus:ring-do_now"
+                />
+                {errors.recurringIntervalDays && (
+                  <p className="mt-1 text-xs text-red-500">{errors.recurringIntervalDays}</p>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-gray-700">
+                  Chỉ lặp khi hoàn thành task trước
+                </label>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={values.onlyRepeatWhenPrevDone}
+                  onClick={() => set('onlyRepeatWhenPrevDone', !values.onlyRepeatWhenPrevDone)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
+                    values.onlyRepeatWhenPrevDone ? 'bg-do_now' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                      values.onlyRepeatWhenPrevDone ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Actions ── */}
+        <div className="flex gap-3 justify-end pt-2 border-t border-gray-100">
           <button
             type="button"
-            role="switch"
-            aria-checked={values.isRecurring}
-            onClick={() => set('isRecurring', !values.isRecurring)}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
-              values.isRecurring ? 'bg-do_now' : 'bg-gray-300'
-            }`}
+            onClick={onCancel}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
           >
-            <span
-              className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
-                values.isRecurring ? 'translate-x-6' : 'translate-x-1'
-              }`}
-            />
+            Huỷ
+          </button>
+          <button
+            type="submit"
+            className="rounded-lg bg-do_now px-5 py-2 text-sm font-medium text-white hover:bg-teal-600 transition"
+          >
+            {task ? 'Lưu thay đổi' : 'Thêm task'}
           </button>
         </div>
+      </form>
 
-        {/* Recurring sub-fields (visible only when isRecurring = true) */}
-        {values.isRecurring && (
-          <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 flex flex-col gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Chu kỳ lặp (ngày) <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                min={1}
-                value={values.recurringIntervalDays}
-                onChange={(e) =>
-                  set('recurringIntervalDays', parseInt(e.target.value) || 1)
-                }
-                className={inputCls(errors.recurringIntervalDays)}
-              />
-              {errors.recurringIntervalDays && (
-                <p className="mt-1 text-xs text-red-500">{errors.recurringIntervalDays}</p>
-              )}
-            </div>
-
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">
-                Chỉ lặp khi hoàn thành task trước
-              </label>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={values.onlyRepeatWhenPrevDone}
-                onClick={() => set('onlyRepeatWhenPrevDone', !values.onlyRepeatWhenPrevDone)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
-                  values.onlyRepeatWhenPrevDone ? 'bg-do_now' : 'bg-gray-300'
-                }`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
-                    values.onlyRepeatWhenPrevDone ? 'translate-x-6' : 'translate-x-1'
-                  }`}
-                />
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ── Actions ── */}
-      <div className="flex gap-3 justify-end pt-2 border-t border-gray-100">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
-        >
-          Huỷ
-        </button>
-        <button
-          type="submit"
-          className="rounded-lg bg-do_now px-5 py-2 text-sm font-medium text-white hover:bg-teal-600 transition"
-        >
-          {task ? 'Lưu thay đổi' : 'Thêm task'}
-        </button>
-      </div>
-    </form>
+      {/* Discard Custom Label creation confirm modal */}
+      <UnsavedChangesModal
+        isOpen={showLabelDiscardConfirm}
+        onContinue={() => setShowLabelDiscardConfirm(false)}
+        onDiscard={() => {
+          setShowLabelDiscardConfirm(false);
+          setShowCreateLabel(false);
+          setNewLabelName('');
+          setNewLabelError('');
+        }}
+        title="Huỷ tạo nhãn mới?"
+        message="Tên nhãn đang nhập sẽ không được lưu. Bạn có chắc muốn huỷ không?"
+      />
+    </>
   );
 }
