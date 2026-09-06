@@ -133,10 +133,7 @@ export default function ConfirmModal({
           </button>
           <button
             type="button"
-            onClick={() => {
-              onConfirm();
-              onClose();
-            }}
+            onClick={onConfirm}
             className={`rounded-lg px-4 py-2 text-sm font-medium transition shadow-sm ${vStyle.btnBg}`}
           >
             {confirmText}

@@ -110,6 +110,7 @@ export default function TaskCard({ task }: TaskCardProps) {
 
   function handleConfirmDelete() {
     deleteTask(task.id);
+    setDeleteModalOpen(false);
   }
 
   return (
