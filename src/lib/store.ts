@@ -88,16 +88,24 @@ export const useAppStore = create<AppState>()(
 
       // ── Task actions ──
       addTask: (taskData) =>
-        set((state) => ({
-          tasks: [
-            ...state.tasks,
-            {
-              ...taskData,
-              id: ('id' in taskData && taskData.id) ? taskData.id : generateId(),
-              createdAt: ('createdAt' in taskData && taskData.createdAt) ? taskData.createdAt : new Date().toISOString(),
-            },
-          ],
-        })),
+        set((state) => {
+          const id = ('id' in taskData && taskData.id) ? taskData.id : generateId();
+          const seriesId = taskData.isRecurring
+            ? (taskData.seriesId ?? id)
+            : taskData.seriesId;
+
+          return {
+            tasks: [
+              ...state.tasks,
+              {
+                ...taskData,
+                id,
+                seriesId,
+                createdAt: ('createdAt' in taskData && taskData.createdAt) ? taskData.createdAt : new Date().toISOString(),
+              },
+            ],
+          };
+        }),
 
       updateTask: (id, updates) =>
         set((state) => ({

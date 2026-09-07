@@ -9,6 +9,9 @@ export interface Label {
   color: string; // hex, tự sinh khi user tạo nhãn mới
 }
 
+export type RecurrenceMode = 'fixed_interval' | 'month_anchor';
+export type MonthAnchor = 'start_of_month' | 'end_of_month';
+
 export interface Task {
   id: string;
   name: string;                       // bắt buộc, tối đa 255 ký tự
@@ -18,9 +21,18 @@ export interface Task {
   labelId: string;                    // tham chiếu Label
   classification: Classification;     // MVP: bắt buộc chọn thủ công (xem ghi chú AI ở 1.5.5)
   isRecurring: boolean;                // bắt buộc, mặc định false
-  recurringIntervalDays?: number;     // bắt buộc NẾU isRecurring = true
+  recurrenceMode?: RecurrenceMode;    // 'fixed_interval' | 'month_anchor', mặc định 'fixed_interval'
+  recurringIntervalDays?: number;     // bắt buộc NẾU isRecurring = true và recurrenceMode = 'fixed_interval'
+  monthAnchor?: MonthAnchor;          // 'start_of_month' | 'end_of_month' NẾU recurrenceMode = 'month_anchor'
+  anchorOffsetDays?: number;          // số ngày bù so với neo: trước (-), sau (+), đúng ngày (0)
+  seriesId?: string;                  // ID chuỗi lặp lại
   onlyRepeatWhenPrevDone?: boolean;   // bắt buộc NẾU isRecurring = true
   createdAt: string;                  // ISO, tự sinh
+}
+
+/** Helper trả về recurrenceMode của task, mặc định 'fixed_interval' cho task cũ */
+export function getRecurrenceMode(task: Task): RecurrenceMode {
+  return task.recurrenceMode ?? 'fixed_interval';
 }
 
 export type TaskCompletionStatus = 'completed' | 'skipped';

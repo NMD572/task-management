@@ -18,7 +18,7 @@ import ConfirmModal from '@/components/common/ConfirmModal';
 import UnsavedChangesModal from '@/components/common/UnsavedChangesModal';
 import { useAppStore } from '@/lib/store';
 import { generateNextOccurrence } from '@/lib/recurring';
-import type { Task, TaskCompletionStatus } from '@/lib/types';
+import { getRecurrenceMode, type Task, type TaskCompletionStatus } from '@/lib/types';
 
 interface TaskCardProps {
   task: Task;
@@ -193,18 +193,48 @@ export default function TaskCard({ task }: TaskCardProps) {
           )}
 
           {/* Recurring indicator */}
-          {task.isRecurring && (
-            <span
-              className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-600"
-              title={`Lặp lại mỗi ${task.recurringIntervalDays} ngày ${
-                task.onlyRepeatWhenPrevDone ? '(khi hoàn thành/bỏ qua)' : '(cố định)'
-              }`}
-            >
-              <Repeat size={10} />
-              {task.recurringIntervalDays}d
-              {task.onlyRepeatWhenPrevDone ? ' ✓' : ' ↻'}
-            </span>
-          )}
+          {task.isRecurring && (() => {
+            const mode = getRecurrenceMode(task);
+            if (mode === 'month_anchor') {
+              const anchorText = task.monthAnchor === 'start_of_month' ? 'Đầu tháng' : 'Cuối tháng';
+              const offset = task.anchorOffsetDays ?? 0;
+              const offsetText =
+                offset === 0
+                  ? ''
+                  : offset < 0
+                  ? `-${Math.abs(offset)}d`
+                  : `+${offset}d`;
+              const badgeText = `${anchorText}${offsetText ? ` ${offsetText}` : ''}`;
+              return (
+                <span
+                  className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-600"
+                  title={`Lặp lại hàng tháng: ${anchorText} ${
+                    offset === 0
+                      ? '(đúng ngày)'
+                      : offset < 0
+                      ? `(trước ${Math.abs(offset)} ngày)`
+                      : `(sau ${offset} ngày)`
+                  } ${task.onlyRepeatWhenPrevDone ? '– khi hoàn thành' : '– cố định'}`}
+                >
+                  <Repeat size={10} />
+                  {badgeText}
+                  {task.onlyRepeatWhenPrevDone ? ' ✓' : ' ↻'}
+                </span>
+              );
+            }
+            return (
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-600"
+                title={`Lặp lại mỗi ${task.recurringIntervalDays} ngày ${
+                  task.onlyRepeatWhenPrevDone ? '(khi hoàn thành/bỏ qua)' : '(cố định)'
+                }`}
+              >
+                <Repeat size={10} />
+                {task.recurringIntervalDays}d
+                {task.onlyRepeatWhenPrevDone ? ' ✓' : ' ↻'}
+              </span>
+            );
+          })()}
         </div>
 
         {/* ── Note display if exists for today ── */}

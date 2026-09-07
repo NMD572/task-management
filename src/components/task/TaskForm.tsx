@@ -5,7 +5,13 @@ import { format } from 'date-fns';
 import { X, Tag } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import UnsavedChangesModal from '@/components/common/UnsavedChangesModal';
-import type { Classification, Task } from '@/lib/types';
+import {
+  type Classification,
+  type MonthAnchor,
+  type RecurrenceMode,
+  type Task,
+  getRecurrenceMode,
+} from '@/lib/types';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface TaskFormProps {
@@ -23,6 +29,7 @@ interface FormErrors {
   labelId?: string;
   classification?: string;
   recurringIntervalDays?: string;
+  anchorOffsetDays?: string;
 }
 
 // ── Classification options ─────────────────────────────────────────────────
@@ -46,9 +53,26 @@ const PRESET_LABEL_COLORS = [
   '#6366F1', // Indigo
 ];
 
+type OffsetDirection = 'exact' | 'before' | 'after';
+
+function getOffsetDirectionAndValue(offset?: number): { direction: OffsetDirection; absDays: number } {
+  if (!offset || offset === 0) {
+    return { direction: 'exact', absDays: 0 };
+  }
+  if (offset < 0) {
+    return { direction: 'before', absDays: Math.abs(offset) };
+  }
+  return { direction: 'after', absDays: offset };
+}
+
 // ── Form initial values ────────────────────────────────────────────────────
 function getInitialValues(task?: Task) {
   const today = format(new Date(), 'yyyy-MM-dd');
+  const initialMode: RecurrenceMode = task?.isRecurring
+    ? getRecurrenceMode(task)
+    : 'fixed_interval';
+  const { direction, absDays } = getOffsetDirectionAndValue(task?.anchorOffsetDays);
+
   return {
     name:                    task?.name ?? '',
     description:             task?.description ?? '',
@@ -57,7 +81,11 @@ function getInitialValues(task?: Task) {
     labelId:                 task?.labelId ?? '',
     classification:          task?.classification ?? ('' as Classification | ''),
     isRecurring:             task?.isRecurring ?? false,
+    recurrenceMode:          initialMode,
     recurringIntervalDays:   task?.recurringIntervalDays ?? 1,
+    monthAnchor:             task?.monthAnchor ?? ('start_of_month' as MonthAnchor),
+    offsetDirection:         direction,
+    offsetAbsDays:           absDays,
     onlyRepeatWhenPrevDone:  task?.onlyRepeatWhenPrevDone ?? false,
   };
 }
@@ -90,7 +118,11 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
       values.labelId !== init.labelId ||
       values.classification !== init.classification ||
       values.isRecurring !== init.isRecurring ||
+      values.recurrenceMode !== init.recurrenceMode ||
       values.recurringIntervalDays !== init.recurringIntervalDays ||
+      values.monthAnchor !== init.monthAnchor ||
+      values.offsetDirection !== init.offsetDirection ||
+      values.offsetAbsDays !== init.offsetAbsDays ||
       values.onlyRepeatWhenPrevDone !== init.onlyRepeatWhenPrevDone ||
       (showCreateLabel && newLabelName.trim().length > 0)
     );
@@ -129,9 +161,18 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
     }
 
     if (values.isRecurring) {
-      const interval = Number(values.recurringIntervalDays);
-      if (!interval || interval <= 0) {
-        errs.recurringIntervalDays = 'Chu kỳ lặp phải lớn hơn 0.';
+      if (values.recurrenceMode === 'fixed_interval') {
+        const interval = Number(values.recurringIntervalDays);
+        if (!interval || interval <= 0) {
+          errs.recurringIntervalDays = 'Chu kỳ lặp phải lớn hơn 0.';
+        }
+      } else if (values.recurrenceMode === 'month_anchor') {
+        if (values.offsetDirection !== 'exact') {
+          const abs = Number(values.offsetAbsDays);
+          if (!abs || abs <= 0) {
+            errs.anchorOffsetDays = 'Số ngày bù phải lớn hơn 0.';
+          }
+        }
       }
     }
 
@@ -190,6 +231,13 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
     e.preventDefault();
     if (!validate()) return;
 
+    let computedOffset = 0;
+    if (values.offsetDirection === 'before') {
+      computedOffset = -Math.abs(Number(values.offsetAbsDays) || 0);
+    } else if (values.offsetDirection === 'after') {
+      computedOffset = Math.abs(Number(values.offsetAbsDays) || 0);
+    }
+
     const payload = {
       name:           values.name.trim(),
       description:    values.description.trim() || undefined,
@@ -199,8 +247,15 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
       classification: values.classification as Classification,
       isRecurring:    values.isRecurring,
       ...(values.isRecurring && {
-        recurringIntervalDays:  Number(values.recurringIntervalDays),
+        recurrenceMode:         values.recurrenceMode,
         onlyRepeatWhenPrevDone: values.onlyRepeatWhenPrevDone,
+        ...(values.recurrenceMode === 'fixed_interval' && {
+          recurringIntervalDays: Number(values.recurringIntervalDays),
+        }),
+        ...(values.recurrenceMode === 'month_anchor' && {
+          monthAnchor:      values.monthAnchor,
+          anchorOffsetDays: computedOffset,
+        }),
       }),
     };
 
@@ -470,38 +525,156 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
           </div>
 
           {values.isRecurring && (
-            <div className="flex flex-col gap-3 pt-2 border-t border-gray-200 animate-in fade-in duration-200">
+            <div className="flex flex-col gap-4 pt-3 border-t border-gray-200 animate-in fade-in duration-200">
+              {/* Recurrence Mode Selector */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Chu kỳ lặp (số ngày) <span className="text-red-500">*</span>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Kiểu lặp lại
                 </label>
-                <input
-                  type="number"
-                  min={1}
-                  value={values.recurringIntervalDays}
-                  onChange={(e) => {
-                    set('recurringIntervalDays', Number(e.target.value));
-                    if (errors.recurringIntervalDays) {
-                      setErrors((prev) => ({ ...prev, recurringIntervalDays: undefined }));
-                    }
-                  }}
-                  className="w-32 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-do_now focus:outline-none focus:ring-1 focus:ring-do_now"
-                />
-                {errors.recurringIntervalDays && (
-                  <p className="mt-1 text-xs text-red-500">{errors.recurringIntervalDays}</p>
-                )}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => set('recurrenceMode', 'fixed_interval')}
+                    className={`py-2 px-3 rounded-lg text-xs font-medium border transition ${
+                      values.recurrenceMode === 'fixed_interval'
+                        ? 'border-do_now bg-teal-50 text-do_now font-semibold shadow-xs'
+                        : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    Chu kỳ cố định
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => set('recurrenceMode', 'month_anchor')}
+                    className={`py-2 px-3 rounded-lg text-xs font-medium border transition ${
+                      values.recurrenceMode === 'month_anchor'
+                        ? 'border-do_now bg-teal-50 text-do_now font-semibold shadow-xs'
+                        : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    Ngày đặc biệt trong tháng
+                  </button>
+                </div>
               </div>
 
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-gray-700">
-                  Chỉ lặp khi hoàn thành task trước
-                </label>
+              {/* Mode A: Fixed Interval */}
+              {values.recurrenceMode === 'fixed_interval' && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Chu kỳ lặp (số ngày) <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      value={values.recurringIntervalDays}
+                      onChange={(e) => {
+                        set('recurringIntervalDays', Number(e.target.value));
+                        if (errors.recurringIntervalDays) {
+                          setErrors((prev) => ({ ...prev, recurringIntervalDays: undefined }));
+                        }
+                      }}
+                      className="w-32 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-do_now focus:outline-none focus:ring-1 focus:ring-do_now"
+                    />
+                    <span className="text-xs text-gray-500">ngày / lần</span>
+                  </div>
+                  {errors.recurringIntervalDays && (
+                    <p className="mt-1 text-xs text-red-500">{errors.recurringIntervalDays}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Mode B: Month Anchor */}
+              {values.recurrenceMode === 'month_anchor' && (
+                <div className="flex flex-col gap-2.5">
+                  <label className="block text-xs font-medium text-gray-700">
+                    Quy tắc ngày trong tháng <span className="text-red-500">*</span>
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {/* Anchor: Start vs End of month */}
+                    <select
+                      value={values.monthAnchor}
+                      onChange={(e) => set('monthAnchor', e.target.value as MonthAnchor)}
+                      className="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-800 focus:border-do_now focus:outline-none focus:ring-1 focus:ring-do_now"
+                    >
+                      <option value="start_of_month">Đầu tháng</option>
+                      <option value="end_of_month">Cuối tháng</option>
+                    </select>
+
+                    {/* Direction: Before / After / Exact */}
+                    <select
+                      value={values.offsetDirection}
+                      onChange={(e) => {
+                        const dir = e.target.value as OffsetDirection;
+                        set('offsetDirection', dir);
+                        if (dir === 'exact') {
+                          set('offsetAbsDays', 0);
+                        } else if (values.offsetAbsDays === 0) {
+                          set('offsetAbsDays', 1);
+                        }
+                        if (errors.anchorOffsetDays) {
+                          setErrors((prev) => ({ ...prev, anchorOffsetDays: undefined }));
+                        }
+                      }}
+                      className="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-800 focus:border-do_now focus:outline-none focus:ring-1 focus:ring-do_now"
+                    >
+                      <option value="exact">Đúng ngày đó</option>
+                      <option value="before">Trước</option>
+                      <option value="after">Sau</option>
+                    </select>
+
+                    {/* Offset Days (hidden when Exact) */}
+                    {values.offsetDirection !== 'exact' ? (
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="number"
+                          min={1}
+                          max={28}
+                          value={values.offsetAbsDays || ''}
+                          onChange={(e) => {
+                            set('offsetAbsDays', Number(e.target.value));
+                            if (errors.anchorOffsetDays) {
+                              setErrors((prev) => ({ ...prev, anchorOffsetDays: undefined }));
+                            }
+                          }}
+                          placeholder="Số ngày"
+                          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-do_now focus:outline-none focus:ring-1 focus:ring-do_now"
+                        />
+                        <span className="text-xs text-gray-500 shrink-0">ngày</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center text-xs text-gray-400 italic px-2">
+                        (Khớp ngày đầu/cuối tháng)
+                      </div>
+                    )}
+                  </div>
+
+                  {errors.anchorOffsetDays && (
+                    <p className="mt-0.5 text-xs text-red-500">{errors.anchorOffsetDays}</p>
+                  )}
+
+                  <p className="text-[11px] text-gray-500 italic mt-0.5">
+                    Ví dụ: &ldquo;Cuối tháng&rdquo; + &ldquo;Trước&rdquo; + &ldquo;2 ngày&rdquo; sẽ tự động rơi vào 26/02 hoặc 28/04 hoặc 29/05 tuỳ từng tháng.
+                  </p>
+                </div>
+              )}
+
+              {/* Only repeat when previous done toggle */}
+              <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block">
+                    Chỉ lặp khi hoàn thành task trước
+                  </label>
+                  <p className="text-[11px] text-gray-500">
+                    Nếu tắt: task mới sẽ tự sinh khi ngày tới hạn, không phụ thuộc task trước
+                  </p>
+                </div>
                 <button
                   type="button"
                   role="switch"
                   aria-checked={values.onlyRepeatWhenPrevDone}
                   onClick={() => set('onlyRepeatWhenPrevDone', !values.onlyRepeatWhenPrevDone)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition shrink-0 ${
                     values.onlyRepeatWhenPrevDone ? 'bg-do_now' : 'bg-gray-300'
                   }`}
                 >
