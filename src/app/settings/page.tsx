@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   Tag,
   Trash2,
+  Pencil,
   Plus,
   X,
 } from 'lucide-react';
@@ -61,8 +62,54 @@ function SettingsContent() {
   const labels                   = useAppStore((s) => s.labels);
   const tasks                    = useAppStore((s) => s.tasks);
   const deleteLabel              = useAppStore((s) => s.deleteLabel);
+  const updateLabel              = useAppStore((s) => s.updateLabel);
 
   const [labelToDelete, setLabelToDelete] = useState<Label | null>(null);
+
+  // Edit label state
+  const [labelToEdit, setLabelToEdit] = useState<Label | null>(null);
+  const [editLabelName, setEditLabelName] = useState('');
+  const [editLabelColor, setEditLabelColor] = useState('#3B82F6');
+  const [editLabelError, setEditLabelError] = useState('');
+
+  const PRESET_LABEL_COLORS = [
+    '#3B82F6', '#10B981', '#F59E0B', '#EC4899',
+    '#7C3AED', '#14B8A6', '#EF4444', '#6366F1',
+  ];
+
+  function handleOpenEditLabel(lbl: Label) {
+    setLabelToEdit(lbl);
+    setEditLabelName(lbl.name);
+    setEditLabelColor(lbl.color);
+    setEditLabelError('');
+  }
+
+  function handleConfirmEditLabel() {
+    if (!labelToEdit) return;
+    const trimmed = editLabelName.trim();
+
+    if (!trimmed) {
+      setEditLabelError('Tên nhãn không được để trống.');
+      return;
+    }
+    if (trimmed.length > 255) {
+      setEditLabelError('Tên nhãn tối đa 255 ký tự.');
+      return;
+    }
+    // Duplicate check: exclude itself
+    const isDuplicate = labels.some(
+      (l) => l.id !== labelToEdit.id && l.name.trim().toLowerCase() === trimmed.toLowerCase()
+    );
+    if (isDuplicate) {
+      setEditLabelError('Tên nhãn này đã tồn tại.');
+      return;
+    }
+
+    updateLabel(labelToEdit.id, { name: trimmed, color: editLabelColor });
+    setLabelToEdit(null);
+    setEditLabelName('');
+    setEditLabelError('');
+  }
 
   // Time window add form state
   const [showAddTimeWindow, setShowAddTimeWindow] = useState(false);
@@ -471,28 +518,115 @@ function SettingsContent() {
               <div className="divide-y divide-gray-100">
                 {customLabels.map((lbl) => {
                   const usageCount = tasks.filter((t) => t.labelId === lbl.id).length;
+                  const isEditing = labelToEdit?.id === lbl.id;
                   return (
-                    <div key={lbl.id} className="py-3 flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <span
-                          className="w-4 h-4 rounded-full shrink-0 shadow-xs ring-1 ring-black/10"
-                          style={{ backgroundColor: lbl.color }}
-                        />
-                        <span className="text-sm font-medium text-gray-800">{lbl.name}</span>
-                        <span className="text-xs text-gray-400">
-                          ({usageCount} task{usageCount !== 1 ? 's' : ''})
-                        </span>
+                    <div key={lbl.id} className="py-3 flex flex-col gap-2">
+                      {/* Label row */}
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <span
+                            className="w-4 h-4 rounded-full shrink-0 shadow-xs ring-1 ring-black/10"
+                            style={{ backgroundColor: lbl.color }}
+                          />
+                          <span className="text-sm font-medium text-gray-800">{lbl.name}</span>
+                          <span className="text-xs text-gray-400">
+                            ({usageCount} task{usageCount !== 1 ? 's' : ''})
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => isEditing ? setLabelToEdit(null) : handleOpenEditLabel(lbl)}
+                            aria-label={`Sửa nhãn ${lbl.name}`}
+                            title="Sửa nhãn"
+                            className={`p-1.5 rounded-lg transition ${
+                              isEditing
+                                ? 'text-do_now bg-teal-50'
+                                : 'text-gray-400 hover:text-do_now hover:bg-teal-50'
+                            }`}
+                          >
+                            <Pencil size={15} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setLabelToDelete(lbl)}
+                            aria-label={`Xoá nhãn ${lbl.name}`}
+                            title="Xoá nhãn"
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => setLabelToDelete(lbl)}
-                        aria-label={`Xoá nhãn ${lbl.name}`}
-                        title="Xoá nhãn"
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      {/* Inline Edit Form */}
+                      {isEditing && (
+                        <div className="mt-1 p-4 bg-gray-50 rounded-xl border border-gray-200 flex flex-col gap-3 animate-in fade-in duration-150">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Tên nhãn</label>
+                            <input
+                              type="text"
+                              maxLength={255}
+                              value={editLabelName}
+                              onChange={(e) => {
+                                setEditLabelName(e.target.value);
+                                if (editLabelError) setEditLabelError('');
+                              }}
+                              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-800 focus:border-do_now focus:outline-none focus:ring-1 focus:ring-do_now"
+                            />
+                            {editLabelError && (
+                              <p className="mt-1 text-xs text-red-500">{editLabelError}</p>
+                            )}
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1.5">Màu sắc</label>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {PRESET_LABEL_COLORS.map((clr) => (
+                                <button
+                                  key={clr}
+                                  type="button"
+                                  onClick={() => setEditLabelColor(clr)}
+                                  style={{ backgroundColor: clr }}
+                                  className={`w-6 h-6 rounded-full transition-transform ${
+                                    editLabelColor === clr
+                                      ? 'scale-125 ring-2 ring-offset-2 ring-gray-400'
+                                      : 'hover:scale-110'
+                                  }`}
+                                />
+                              ))}
+                              <div className="flex items-center gap-1.5 ml-2">
+                                <input
+                                  type="color"
+                                  value={editLabelColor}
+                                  onChange={(e) => setEditLabelColor(e.target.value)}
+                                  className="w-6 h-6 rounded cursor-pointer border-0 p-0 bg-transparent"
+                                  title="Màu tuỳ chỉnh"
+                                />
+                                <span className="text-[11px] text-gray-500">Màu khác</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-200">
+                            <button
+                              type="button"
+                              onClick={() => setLabelToEdit(null)}
+                              className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 rounded-lg transition"
+                            >
+                              Huỷ
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleConfirmEditLabel}
+                              className="px-3.5 py-1.5 text-xs font-semibold text-white bg-do_now hover:bg-teal-600 rounded-lg transition shadow-xs"
+                            >
+                              Lưu thay đổi
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
