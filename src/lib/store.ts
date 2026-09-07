@@ -6,6 +6,7 @@ import type {
   Label,
   TaskCompletion,
   NotificationConfig,
+  CompletionSettings,
   UrgencyAutoUpgradeConfig,
   UserProfile,
 } from './types';
@@ -31,6 +32,10 @@ const DEFAULT_NOTIFICATION_CONFIG: NotificationConfig = {
   timeWindows: [],
 };
 
+const DEFAULT_COMPLETION_SETTINGS: CompletionSettings = {
+  notePromptEnabled: true,
+};
+
 const DEFAULT_URGENCY_CONFIG: UrgencyAutoUpgradeConfig = {
   enabled: false,
   daysThreshold: 2,
@@ -48,6 +53,7 @@ interface AppState {
   labels: Label[];
   taskCompletions: TaskCompletion[];
   notificationConfig: NotificationConfig;
+  completionSettings: CompletionSettings;
   urgencyConfig: UrgencyAutoUpgradeConfig;
   userProfile: UserProfile | null;
 
@@ -67,6 +73,7 @@ interface AppState {
 
   // Config actions
   updateNotificationConfig: (config: Partial<NotificationConfig>) => void;
+  updateCompletionSettings: (settings: Partial<CompletionSettings>) => void;
   updateUrgencyConfig: (config: Partial<UrgencyAutoUpgradeConfig>) => void;
 
   // User profile actions
@@ -83,6 +90,7 @@ export const useAppStore = create<AppState>()(
       labels: DEFAULT_LABELS,
       taskCompletions: [],
       notificationConfig: DEFAULT_NOTIFICATION_CONFIG,
+      completionSettings: DEFAULT_COMPLETION_SETTINGS,
       urgencyConfig: DEFAULT_URGENCY_CONFIG,
       userProfile: null,
 
@@ -198,6 +206,14 @@ export const useAppStore = create<AppState>()(
               config.timeWindows ??
               state.notificationConfig?.timeWindows ??
               [],
+          },
+        })),
+
+      updateCompletionSettings: (settings) =>
+        set((state) => ({
+          completionSettings: {
+            ...(state.completionSettings ?? DEFAULT_COMPLETION_SETTINGS),
+            ...settings,
           },
         })),
 

@@ -15,6 +15,7 @@ import {
   Pencil,
   Plus,
   X,
+  CheckSquare,
 } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import ConfirmModal from '@/components/common/ConfirmModal';
@@ -59,6 +60,8 @@ const QUADRANTS: {
 function SettingsContent() {
   const notificationConfig       = useAppStore((s) => s.notificationConfig);
   const updateNotificationConfig = useAppStore((s) => s.updateNotificationConfig);
+  const completionSettings       = useAppStore((s) => s.completionSettings);
+  const updateCompletionSettings = useAppStore((s) => s.updateCompletionSettings);
   const labels                   = useAppStore((s) => s.labels);
   const tasks                    = useAppStore((s) => s.tasks);
   const deleteLabel              = useAppStore((s) => s.deleteLabel);
@@ -632,6 +635,45 @@ function SettingsContent() {
                 })}
               </div>
             )}
+          </section>
+
+          {/* ══════════════════════════════════════════════════════════════════
+              4. SECTION: THIẾT LẬP HOÀN THÀNH / BỎ QUA (COMPLETION SETTINGS)
+          ══════════════════════════════════════════════════════════════════ */}
+          <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+                  <CheckSquare size={18} className="text-do_now" />
+                  Yêu cầu ghi chú khi Hoàn thành / Bỏ qua
+                </h2>
+                <p className="text-sm text-gray-500 mt-1 max-w-xl">
+                  Khi bật, nhấn nút Hoàn thành hoặc Bỏ qua sẽ hiện popup để bạn thêm ghi chú chi tiết.
+                  Khi tắt, hệ thống sẽ lưu trạng thái ngay lập tức mà không cần xác nhận, giúp thao tác nhanh hơn.
+                </p>
+              </div>
+
+              {/* Note prompt toggle switch */}
+              <button
+                type="button"
+                role="switch"
+                aria-checked={completionSettings?.notePromptEnabled ?? true}
+                onClick={() =>
+                  updateCompletionSettings({
+                    notePromptEnabled: !(completionSettings?.notePromptEnabled ?? true),
+                  })
+                }
+                className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-do_now focus:ring-offset-2 ${
+                  (completionSettings?.notePromptEnabled ?? true) ? 'bg-do_now' : 'bg-gray-200'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                    (completionSettings?.notePromptEnabled ?? true) ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
           </section>
         </div>
       </main>

@@ -58,6 +58,10 @@ export interface NotificationConfig {
   timeWindows: NotificationTimeWindow[]; // danh sách các khung giờ hiển thị thông báo
 }
 
+export interface CompletionSettings {
+  notePromptEnabled: boolean; // default true: mở modal ghi chú khi complete/skip; false: lưu ngay lập tức
+}
+
 export interface UrgencyAutoUpgradeConfig {
   enabled: boolean;
   daysThreshold: number;              // khi (deadline - hôm nay) <= giá trị này, tự nâng not-urgent -> urgent

@@ -43,6 +43,9 @@ export default function TaskCard({ task }: TaskCardProps) {
   const taskCompletions      = useAppStore((s) => s.taskCompletions);
   const addTaskCompletion    = useAppStore((s) => s.addTaskCompletion);
   const removeTaskCompletion = useAppStore((s) => s.removeTaskCompletion);
+  const completionSettings   = useAppStore((s) => s.completionSettings);
+
+  const notePromptEnabled = completionSettings?.notePromptEnabled ?? true;
 
   const label = labels.find((l) => l.id === task.labelId);
 
@@ -65,26 +68,7 @@ export default function TaskCard({ task }: TaskCardProps) {
     ? new Date(task.deadline) < new Date()
     : false;
 
-  function handleOpenCompletionModal(status: TaskCompletionStatus) {
-    setCompletionModal({ open: true, status });
-    setCompletionNote('');
-  }
-
-  function handleRequestCloseCompletion() {
-    if (completionNote.trim().length > 0) {
-      setShowCompletionDiscardConfirm(true);
-    } else {
-      setCompletionModal(null);
-      setCompletionNote('');
-    }
-  }
-
-  function handleConfirmCompletion() {
-    if (!completionModal) return;
-
-    const status = completionModal.status;
-    const note = completionNote.trim() || undefined;
-
+  function executeCompletion(status: TaskCompletionStatus, note?: string) {
     // 1. Record completion/skip for today
     addTaskCompletion({
       taskId: task.id,
@@ -103,6 +87,34 @@ export default function TaskCard({ task }: TaskCardProps) {
         addTask(nextOccurrence);
       }
     }
+  }
+
+  function handleActionClick(status: TaskCompletionStatus) {
+    if (notePromptEnabled) {
+      setCompletionModal({ open: true, status });
+      setCompletionNote('');
+    } else {
+      // Direct completion without modal / note
+      executeCompletion(status, undefined);
+    }
+  }
+
+  function handleRequestCloseCompletion() {
+    if (completionNote.trim().length > 0) {
+      setShowCompletionDiscardConfirm(true);
+    } else {
+      setCompletionModal(null);
+      setCompletionNote('');
+    }
+  }
+
+  function handleConfirmCompletion() {
+    if (!completionModal) return;
+
+    const status = completionModal.status;
+    const note = completionNote.trim() || undefined;
+
+    executeCompletion(status, note);
 
     setCompletionModal(null);
     setCompletionNote('');
@@ -278,7 +290,7 @@ export default function TaskCard({ task }: TaskCardProps) {
             <div className="flex items-center gap-2 w-full">
               <button
                 type="button"
-                onClick={() => handleOpenCompletionModal('completed')}
+                onClick={() => handleActionClick('completed')}
                 className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50/80 hover:bg-emerald-100 text-emerald-700 px-2.5 py-1.5 text-xs font-semibold transition shadow-xs"
               >
                 <Check size={13} strokeWidth={2.5} />
@@ -287,7 +299,7 @@ export default function TaskCard({ task }: TaskCardProps) {
 
               <button
                 type="button"
-                onClick={() => handleOpenCompletionModal('skipped')}
+                onClick={() => handleActionClick('skipped')}
                 className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50/80 hover:bg-amber-100 text-amber-700 px-2.5 py-1.5 text-xs font-semibold transition shadow-xs"
               >
                 <Ban size={13} />
