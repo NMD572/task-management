@@ -4,7 +4,7 @@ import { useMemo, useEffect, useRef } from 'react';
 import { parseISO, isWithinInterval, startOfDay, endOfDay, format } from 'date-fns';
 import { useAppStore } from '@/lib/store';
 import { useFilter } from '@/lib/filterContext';
-import { processFixedRecurringTasks } from '@/lib/recurring';
+import { ensureUpcomingOccurrences } from '@/lib/recurring';
 import QuadrantColumn from './QuadrantColumn';
 import type { Classification, Task, TaskCompletion } from '@/lib/types';
 
@@ -50,20 +50,23 @@ function sortQuadrantTasks(
 export default function MatrixBoard() {
   const allTasks         = useAppStore((s) => s.tasks);
   const taskCompletions  = useAppStore((s) => s.taskCompletions);
-  const addTask          = useAppStore((s) => s.addTask);
-  const updateTask       = useAppStore((s) => s.updateTask);
+  const setTasks         = useAppStore((s) => s.setTasks);
   const { searchText, labelIds, dateFrom, dateTo } = useFilter();
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
 
-  // Process fixed-interval recurring tasks on load / when tasks hydrate
+  // Pre-generate upcoming occurrences for fixed recurring tasks (onlyRepeatWhenPrevDone = false)
+  // Look-ahead window: 30 days into the future
   const hasProcessedRef = useRef(false);
   useEffect(() => {
     if (allTasks.length > 0 && !hasProcessedRef.current) {
       hasProcessedRef.current = true;
-      processFixedRecurringTasks(allTasks, addTask, updateTask);
+      const updated = ensureUpcomingOccurrences(allTasks, 30);
+      if (updated.length !== allTasks.length) {
+        setTasks(updated);
+      }
     }
-  }, [allTasks, addTask, updateTask]);
+  }, [allTasks, setTasks]);
 
   // Apply filters — never mutate store.tasks
   const filteredTasks = useMemo(() => {

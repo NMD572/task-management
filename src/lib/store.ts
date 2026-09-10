@@ -61,6 +61,7 @@ interface AppState {
   addTask: (task: Omit<Task, 'id' | 'createdAt'> | Task) => void;
   updateTask: (id: string, updates: Partial<Omit<Task, 'id' | 'createdAt'>>) => void;
   deleteTask: (id: string) => void;
+  setTasks: (tasks: Task[]) => void;
 
   // Label actions
   addLabel: (label: Omit<Label, 'id'> | Label) => string;
@@ -130,6 +131,8 @@ export const useAppStore = create<AppState>()(
             (tc) => tc.taskId !== id
           ),
         })),
+
+      setTasks: (tasks) => set({ tasks }),
 
       // ── Label actions ──
       addLabel: (labelData) => {

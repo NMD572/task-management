@@ -6,8 +6,7 @@ import {
   endOfMonth,
   parseISO,
   format,
-  isBefore,
-  isSameDay,
+  isAfter,
   startOfDay,
   differenceInDays,
 } from 'date-fns';
@@ -102,18 +101,25 @@ export function generateNextOccurrence(task: Task): Task | null {
 }
 
 /**
- * Checks all tasks and generates missing occurrences for fixed-interval or fixed recurring tasks
- * (isRecurring = true and onlyRepeatWhenPrevDone = false) whose interval/scheduled date has arrived.
+ * Ensures upcoming occurrences for recurring tasks with onlyRepeatWhenPrevDone = false
+ * within the interval [today, today + lookAheadDays].
+ *
+ * Requirements (Prompt 18):
+ * 1. Only considers tasks with isRecurring = true AND onlyRepeatWhenPrevDone = false.
+ *    (Tasks with onlyRepeatWhenPrevDone = true are left untouched: they only spawn on complete/skip).
+ * 2. For each seriesId, computes occurrence dates that should exist in [today, today + lookAheadDays].
+ * 3. For any date where no task with the same seriesId + startDate exists, creates a new occurrence.
+ * 4. Returns the full updated tasks array (including existing tasks and newly created occurrences).
  */
-export function processFixedRecurringTasks(
+export function ensureUpcomingOccurrences(
   tasks: Task[],
-  addTask: (task: Task) => void,
-  updateTask: (id: string, updates: Partial<Task>) => void
-): void {
+  lookAheadDays: number = 30
+): Task[] {
   const today = startOfDay(new Date());
+  const horizon = startOfDay(addDays(today, lookAheadDays));
 
   // Find all active fixed-cycle recurring tasks (that don't wait for completion)
-  const fixedTasks = tasks.filter((t) => {
+  const generatorTasks = tasks.filter((t) => {
     if (!t.isRecurring || t.onlyRepeatWhenPrevDone) return false;
     const mode = getRecurrenceMode(t);
     if (mode === 'fixed_interval') {
@@ -125,51 +131,86 @@ export function processFixedRecurringTasks(
     return false;
   });
 
-  for (const task of fixedTasks) {
-    let currentTask = task;
+  if (generatorTasks.length === 0) {
+    return tasks;
+  }
+
+  // Work on a mutable copy of tasks
+  const resultTasks = [...tasks];
+
+  // Group by seriesId so we don't process the same series multiple times
+  const seenSeries = new Set<string>();
+
+  for (const genTask of generatorTasks) {
+    const seriesId = genTask.seriesId ?? genTask.id;
+    if (seenSeries.has(seriesId)) {
+      continue;
+    }
+    seenSeries.add(seriesId);
+
+    // Find all occurrences already existing in the series
+    const existingSeriesTasks = resultTasks.filter(
+      (t) => (t.seriesId ?? t.id) === seriesId
+    );
+
+    // Track existing start dates (YYYY-MM-DD) for this series
+    const existingDates = new Set(existingSeriesTasks.map((t) => t.startDate));
+
+    // Determine the template/generator task: find the latest occurrence or genTask
+    // Sort ascending by startDate
+    const sortedExisting = [...existingSeriesTasks].sort((a, b) => {
+      return a.startDate.localeCompare(b.startDate);
+    });
+
+    let currentTemplate =
+      sortedExisting.find((t) => t.isRecurring) ||
+      sortedExisting[sortedExisting.length - 1] ||
+      genTask;
+
     let iterations = 0;
-    const MAX_ITERATIONS = 365; // Safeguard against runaway loops
+    const MAX_ITERATIONS = 120; // Safe limit (covers daily tasks for 30+ days or monthly tasks for years)
 
-    while (currentTask.isRecurring && iterations < MAX_ITERATIONS) {
+    while (iterations < MAX_ITERATIONS) {
       iterations++;
-      try {
-        const currentStart = parseISO(currentTask.startDate);
-        const mode = getRecurrenceMode(currentTask);
-        let nextStart: Date;
 
-        if (mode === 'month_anchor') {
-          const nextMonth = addMonths(currentStart, 1);
-          nextStart = calculateMonthAnchorDate(
-            currentTask.monthAnchor!,
-            currentTask.anchorOffsetDays ?? 0,
-            nextMonth
-          );
-        } else {
-          nextStart = addDays(currentStart, currentTask.recurringIntervalDays!);
-        }
-
-        const nextStartDay = startOfDay(nextStart);
-
-        // If the next occurrence date is today or in the past, spawn it
-        if (isBefore(nextStartDay, today) || isSameDay(nextStartDay, today)) {
-          const nextOccurrence = generateNextOccurrence(currentTask);
-          if (!nextOccurrence) break;
-
-          // Old instance is no longer the recurring generator
-          updateTask(currentTask.id, { isRecurring: false });
-
-          // Add the newly spawned instance
-          addTask(nextOccurrence);
-
-          currentTask = nextOccurrence;
-        } else {
-          // Next occurrence date is still in the future
-          break;
-        }
-      } catch (e) {
-        console.error('Error processing fixed recurring task:', e);
+      const nextOcc = generateNextOccurrence(currentTemplate);
+      if (!nextOcc) {
         break;
       }
+
+      const nextStartDay = startOfDay(parseISO(nextOcc.startDate));
+
+      // If next occurrence date exceeds our look-ahead horizon, we're done for this series
+      if (isAfter(nextStartDay, horizon)) {
+        break;
+      }
+
+      // If date not already present in the series, add it!
+      if (!existingDates.has(nextOcc.startDate)) {
+        existingDates.add(nextOcc.startDate);
+        resultTasks.push(nextOcc);
+      }
+
+      // Advance template to continue computing forward within horizon
+      currentTemplate = nextOcc;
+    }
+  }
+
+  return resultTasks;
+}
+
+/**
+ * Backward-compatible helper (if any legacy callers remain).
+ */
+export function processFixedRecurringTasks(
+  tasks: Task[],
+  addTask: (task: Task) => void
+): void {
+  const updated = ensureUpcomingOccurrences(tasks, 30);
+  const existingIds = new Set(tasks.map((t) => t.id));
+  for (const task of updated) {
+    if (!existingIds.has(task.id)) {
+      addTask(task);
     }
   }
 }
