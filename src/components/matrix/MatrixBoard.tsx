@@ -5,6 +5,7 @@ import { parseISO, isWithinInterval, startOfDay, endOfDay, format } from 'date-f
 import { useAppStore } from '@/lib/store';
 import { useFilter } from '@/lib/filterContext';
 import { ensureUpcomingOccurrences } from '@/lib/recurring';
+import { applyUrgencyAutoUpgrade } from '@/lib/urgency';
 import QuadrantColumn from './QuadrantColumn';
 import type { Classification, Task, TaskCompletion } from '@/lib/types';
 
@@ -51,6 +52,7 @@ export default function MatrixBoard() {
   const allTasks         = useAppStore((s) => s.tasks);
   const taskCompletions  = useAppStore((s) => s.taskCompletions);
   const setTasks         = useAppStore((s) => s.setTasks);
+  const urgencyConfig    = useAppStore((s) => s.urgencyConfig);
   const { searchText, labelIds, dateFrom, dateTo } = useFilter();
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
@@ -107,21 +109,24 @@ export default function MatrixBoard() {
   }, [allTasks, taskCompletions, todayStr, searchText, labelIds, dateFrom, dateTo]);
 
   // Group + sort filtered tasks by classification according to Prompt 12 rules
+  // Prompt 19: Apply urgency auto-upgrade on display layer before grouping (without mutating store)
   const grouped = useMemo(() => {
+    const displayTasks = applyUrgencyAutoUpgrade(filteredTasks, urgencyConfig);
+
     const map: Record<Classification, Task[]> = {
       do_now:    [],
       schedule:  [],
       delegate:  [],
       eliminate: [],
     };
-    for (const task of filteredTasks) {
+    for (const task of displayTasks) {
       map[task.classification].push(task);
     }
     (Object.keys(map) as Classification[]).forEach((key) => {
       map[key] = sortQuadrantTasks(map[key], taskCompletions, todayStr);
     });
     return map;
-  }, [filteredTasks, taskCompletions, todayStr]);
+  }, [filteredTasks, urgencyConfig, taskCompletions, todayStr]);
 
   return (
     <section aria-label="Ma trận Eisenhower">

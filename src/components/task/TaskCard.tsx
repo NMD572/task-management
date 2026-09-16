@@ -37,6 +37,7 @@ export default function TaskCard({ task }: TaskCardProps) {
   const [showCompletionDiscardConfirm, setShowCompletionDiscardConfirm] = useState(false);
 
   const labels               = useAppStore((s) => s.labels);
+  const tasks                = useAppStore((s) => s.tasks);
   const deleteTask           = useAppStore((s) => s.deleteTask);
   const updateTask           = useAppStore((s) => s.updateTask);
   const addTask              = useAppStore((s) => s.addTask);
@@ -80,7 +81,10 @@ export default function TaskCard({ task }: TaskCardProps) {
     // 2. If task is recurring and onlyRepeatWhenPrevDone is true,
     // both 'completed' and 'skipped' generate the next occurrence
     if (task.isRecurring && task.onlyRepeatWhenPrevDone) {
-      const nextOccurrence = generateNextOccurrence(task);
+      // Prompt 19 fix: look up original task from store (not the display-upgraded prop)
+      // to preserve the original classification (e.g. 'schedule', not 'do_now')
+      const originalTask = tasks.find((t) => t.id === task.id) ?? task;
+      const nextOccurrence = generateNextOccurrence(originalTask);
       if (nextOccurrence) {
         // Current task is resolved and transfers recurrence
         updateTask(task.id, { isRecurring: false });

@@ -16,6 +16,7 @@ import {
   Plus,
   X,
   CheckSquare,
+  Zap,
 } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import ConfirmModal from '@/components/common/ConfirmModal';
@@ -62,6 +63,8 @@ function SettingsContent() {
   const updateNotificationConfig = useAppStore((s) => s.updateNotificationConfig);
   const completionSettings       = useAppStore((s) => s.completionSettings);
   const updateCompletionSettings = useAppStore((s) => s.updateCompletionSettings);
+  const urgencyConfig            = useAppStore((s) => s.urgencyConfig);
+  const updateUrgencyConfig      = useAppStore((s) => s.updateUrgencyConfig);
   const labels                   = useAppStore((s) => s.labels);
   const tasks                    = useAppStore((s) => s.tasks);
   const deleteLabel              = useAppStore((s) => s.deleteLabel);
@@ -674,6 +677,74 @@ function SettingsContent() {
                 />
               </button>
             </div>
+          </section>
+
+          {/* ══════════════════════════════════════════════════════════════════
+              5. SECTION: TỰ ĐỘNG NÂNG MỨC ĐỘ KHẨN CẤP (URGENCY AUTO-UPGRADE)
+          ══════════════════════════════════════════════════════════════════ */}
+          <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+            <div className="border-b border-gray-100 pb-4 mb-5 flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+                  <Zap size={18} className="text-schedule" />
+                  Tự động nâng mức khẩn cấp
+                </h2>
+                <p className="text-sm text-gray-500 mt-1 max-w-xl">
+                  Khi deadline đến gần ngưỡng ngày bạn cài đặt, hệ thống sẽ tự động chuyển đổi hiển thị:
+                  <strong className="text-gray-700 font-medium"> Lên kế hoạch → Thực hiện ngay</strong> trên ma trận mà không thay đổi phân loại gốc của bạn.
+                </p>
+              </div>
+
+              {/* Auto-upgrade switch toggle */}
+              <button
+                type="button"
+                role="switch"
+                aria-checked={urgencyConfig?.enabled ?? false}
+                onClick={() =>
+                  updateUrgencyConfig({
+                    enabled: !(urgencyConfig?.enabled ?? false),
+                  })
+                }
+                className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-schedule focus:ring-offset-2 ${
+                  (urgencyConfig?.enabled ?? false) ? 'bg-schedule' : 'bg-gray-200'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                    (urgencyConfig?.enabled ?? false) ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Threshold days input */}
+            {(urgencyConfig?.enabled ?? false) && (
+              <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in duration-150">
+                <div className="space-y-0.5">
+                  <label htmlFor="urgencyThresholdInput" className="text-sm font-medium text-gray-800">
+                    Số ngày ngưỡng
+                  </label>
+                  <p className="text-xs text-gray-500">
+                    Nâng cấp khi (Deadline − Hôm nay) ≤ số ngày này (ví dụ: 2 ngày).
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="urgencyThresholdInput"
+                    type="number"
+                    min={0}
+                    max={365}
+                    value={urgencyConfig?.daysThreshold ?? 2}
+                    onChange={(e) => {
+                      const val = Math.max(0, parseInt(e.target.value, 10) || 0);
+                      updateUrgencyConfig({ daysThreshold: val });
+                    }}
+                    className="w-24 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-center font-medium focus:border-schedule focus:outline-none focus:ring-1 focus:ring-schedule transition shadow-xs"
+                  />
+                  <span className="text-sm text-gray-600 font-medium">ngày</span>
+                </div>
+              </div>
+            )}
           </section>
         </div>
       </main>
