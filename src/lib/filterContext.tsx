@@ -10,14 +10,14 @@ import {
   type ReactNode,
 } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { startOfWeek, endOfWeek, format } from 'date-fns';
+import { format } from 'date-fns';
 
-// ── Default date range: current week (Mon–Sun) ────────────────────────────
+// ── Default date range: today (From = today, To = today) ──────────────────
 function getDefaultDateFrom() {
-  return format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd');
+  return format(new Date(), 'yyyy-MM-dd');
 }
 function getDefaultDateTo() {
-  return format(endOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd');
+  return format(new Date(), 'yyyy-MM-dd');
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────
@@ -49,10 +49,18 @@ export function useFilter() {
 // ── URL helpers ───────────────────────────────────────────────────────────
 function buildSearch(state: FilterState): string {
   const params = new URLSearchParams();
-  if (state.searchText)          params.set('q', state.searchText);
-  if (state.labelIds.length)     params.set('labels', state.labelIds.join(','));
-  if (state.dateFrom)            params.set('from', state.dateFrom);
-  if (state.dateTo)              params.set('to', state.dateTo);
+  if (state.searchText)      params.set('q', state.searchText);
+  if (state.labelIds.length) params.set('labels', state.labelIds.join(','));
+
+  const defaultFrom = getDefaultDateFrom();
+  const defaultTo   = getDefaultDateTo();
+  // Only persist from/to in URL if they differ from today's default
+  const isCustomDate = state.dateFrom !== defaultFrom || state.dateTo !== defaultTo;
+  if (isCustomDate) {
+    if (state.dateFrom) params.set('from', state.dateFrom);
+    if (state.dateTo)   params.set('to', state.dateTo);
+  }
+
   const str = params.toString();
   return str ? `?${str}` : '';
 }
@@ -127,7 +135,11 @@ export function FilterProvider({ children }: { children: ReactNode }) {
   const setDateFrom = useCallback(
     (v: string) => {
       setState((prev) => {
-        const next = { ...prev, dateFrom: v };
+        const next = {
+          ...prev,
+          dateFrom: v,
+          dateTo: prev.dateTo && v && prev.dateTo < v ? v : prev.dateTo,
+        };
         pushURL(next);
         return next;
       });
@@ -138,7 +150,11 @@ export function FilterProvider({ children }: { children: ReactNode }) {
   const setDateTo = useCallback(
     (v: string) => {
       setState((prev) => {
-        const next = { ...prev, dateTo: v };
+        const next = {
+          ...prev,
+          dateTo: v,
+          dateFrom: prev.dateFrom && v && prev.dateFrom > v ? v : prev.dateFrom,
+        };
         pushURL(next);
         return next;
       });

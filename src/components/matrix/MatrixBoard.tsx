@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useEffect, useRef } from 'react';
-import { parseISO, isWithinInterval, startOfDay, endOfDay, format } from 'date-fns';
+import { parseISO, startOfDay, endOfDay, format } from 'date-fns';
 import { useAppStore } from '@/lib/store';
 import { useFilter } from '@/lib/filterContext';
 import { ensureUpcomingOccurrences } from '@/lib/recurring';
@@ -96,11 +96,19 @@ export default function MatrixBoard() {
         return false;
       }
 
-      // 4. Date range filter: task's startDate must fall within [from, to]
-      if (rangeStart && rangeEnd && task.startDate) {
-        const taskStart = parseISO(task.startDate);
-        if (!isWithinInterval(taskStart, { start: rangeStart, end: rangeEnd })) {
+      // 4. Date range filter (Prompt 5 & Prompt 20):
+      // - Task with deadline: startDate <= rangeEnd AND deadline >= rangeStart
+      // - Task without deadline: startDate <= rangeEnd (trùng hoặc trước rangeEnd)
+      if (task.startDate) {
+        const taskStart = startOfDay(parseISO(task.startDate));
+        if (rangeEnd && taskStart > rangeEnd) {
           return false;
+        }
+        if (rangeStart && task.deadline) {
+          const taskDeadline = parseISO(task.deadline);
+          if (taskDeadline < rangeStart) {
+            return false;
+          }
         }
       }
 
