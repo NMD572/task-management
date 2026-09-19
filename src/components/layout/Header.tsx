@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Search, Globe, Plus, X, Settings, CheckSquare } from 'lucide-react';
 import TaskModal from '@/components/task/TaskModal';
-import GoogleLoginButton from '@/components/auth/GoogleLoginButton';
+// import GoogleLoginButton from '@/components/auth/GoogleLoginButton';
 import { useFilter } from '@/lib/filterContext';
 import { useLanguage } from '@/lib/languageContext';
 
@@ -141,8 +141,8 @@ export default function Header() {
               <Settings size={16} />
             </Link>
 
-            {/* Google login button */}
-            <GoogleLoginButton />
+            {/* Prompt 27: Ẩn button login với Google trên giao diện người dùng */}
+            {/* <GoogleLoginButton /> */}
           </div>
         </div>
       </header>
