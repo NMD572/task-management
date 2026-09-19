@@ -21,6 +21,7 @@ import {
 import Header from '@/components/layout/Header';
 import ConfirmModal from '@/components/common/ConfirmModal';
 import { FilterProvider } from '@/lib/filterContext';
+import { useLanguage } from '@/lib/languageContext';
 import { useAppStore } from '@/lib/store';
 import { validateTimeWindow } from '@/lib/notification';
 import type { Classification, Label, NotificationTimeWindow } from '@/lib/types';
@@ -28,37 +29,38 @@ import type { Classification, Label, NotificationTimeWindow } from '@/lib/types'
 // ── Quadrant Info ──────────────────────────────────────────────────────────
 const QUADRANTS: {
   key: Classification;
-  title: string;
-  subtitle: string;
+  titleKey: string;
+  subtitleKey: string;
   badgeBg: string;
 }[] = [
   {
     key: 'do_now',
-    title: 'Thực hiện ngay',
-    subtitle: 'Quan trọng & Khẩn cấp',
+    titleKey: 'quadrants.do_now_title',
+    subtitleKey: 'quadrants.do_now_subtitle',
     badgeBg: 'bg-do_now text-white',
   },
   {
     key: 'schedule',
-    title: 'Lên kế hoạch',
-    subtitle: 'Quan trọng & Không khẩn cấp',
+    titleKey: 'quadrants.schedule_title',
+    subtitleKey: 'quadrants.schedule_subtitle',
     badgeBg: 'bg-schedule text-white',
   },
   {
     key: 'delegate',
-    title: 'Ủy quyền',
-    subtitle: 'Không quan trọng & Khẩn cấp',
+    titleKey: 'quadrants.delegate_title',
+    subtitleKey: 'quadrants.delegate_subtitle',
     badgeBg: 'bg-delegate text-white',
   },
   {
     key: 'eliminate',
-    title: 'Loại bỏ',
-    subtitle: 'Không quan trọng & Không khẩn cấp',
+    titleKey: 'quadrants.eliminate_title',
+    subtitleKey: 'quadrants.eliminate_subtitle',
     badgeBg: 'bg-eliminate text-white',
   },
 ];
 
 function SettingsContent() {
+  const { t }                    = useLanguage();
   const notificationConfig       = useAppStore((s) => s.notificationConfig);
   const updateNotificationConfig = useAppStore((s) => s.updateNotificationConfig);
   const completionSettings       = useAppStore((s) => s.completionSettings);
@@ -95,11 +97,11 @@ function SettingsContent() {
     const trimmed = editLabelName.trim();
 
     if (!trimmed) {
-      setEditLabelError('Tên nhãn không được để trống.');
+      setEditLabelError(t('settings.custom_labels.edit_form.errors.name_required'));
       return;
     }
     if (trimmed.length > 255) {
-      setEditLabelError('Tên nhãn tối đa 255 ký tự.');
+      setEditLabelError(t('settings.custom_labels.edit_form.errors.name_max'));
       return;
     }
     // Duplicate check: exclude itself
@@ -107,7 +109,7 @@ function SettingsContent() {
       (l) => l.id !== labelToEdit.id && l.name.trim().toLowerCase() === trimmed.toLowerCase()
     );
     if (isDuplicate) {
-      setEditLabelError('Tên nhãn này đã tồn tại.');
+      setEditLabelError(t('settings.custom_labels.edit_form.errors.duplicate'));
       return;
     }
 
@@ -147,7 +149,7 @@ function SettingsContent() {
   const handleAddTimeWindow = () => {
     const validation = validateTimeWindow(newFromTime, newToTime);
     if (!validation.isValid) {
-      setTimeWindowError(validation.error || 'Giờ không hợp lệ.');
+      setTimeWindowError(validation.error || t('settings.advanced.add_modal.invalid_time'));
       return;
     }
 
@@ -195,11 +197,11 @@ function SettingsContent() {
             className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-do_now transition"
           >
             <ArrowLeft size={16} />
-            Quay lại Ma trận
+            {t('settings.back_to_matrix')}
           </Link>
           <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
             <CheckCircle2 size={12} />
-            Tự động lưu vào bộ nhớ
+            {t('settings.auto_saved')}
           </span>
         </div>
 
@@ -210,9 +212,9 @@ function SettingsContent() {
               <Bell size={20} />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Cài đặt</h1>
+              <h1 className="text-2xl font-bold text-gray-900">{t('settings.title')}</h1>
               <p className="text-sm text-gray-500 mt-0.5">
-                Quản lý thông báo và các nhãn công việc tuỳ chỉnh
+                {t('settings.subtitle')}
               </p>
             </div>
           </div>
@@ -226,10 +228,10 @@ function SettingsContent() {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h2 className="text-base font-semibold text-gray-900">
-                  Thông báo tổng quát
+                  {t('settings.general.title')}
                 </h2>
                 <p className="text-sm text-gray-500 mt-1">
-                  Bật hoặc tắt toàn bộ chức năng nhắc nhở và thông báo công việc
+                  {t('settings.general.description')}
                 </p>
               </div>
 
@@ -263,30 +265,27 @@ function SettingsContent() {
             <div className="border-b border-gray-100 pb-4 mb-6">
               <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
                 <Layers size={18} className="text-do_now" />
-                Cài đặt Thông báo Nâng cao
+                {t('settings.advanced.title')}
               </h2>
               <p className="text-sm text-gray-500 mt-1">
-                Tùy chỉnh chi tiết thông báo theo từng góc phần tư và khung giờ
+                {t('settings.advanced.subtitle')}
               </p>
             </div>
 
             {/* Note banner: Chỉ thực hiện reminder cho các task có deadline */}
             <div className="mb-6 flex items-start gap-3 rounded-xl bg-blue-50/70 border border-blue-100 p-3.5 text-xs text-blue-800">
               <Info size={16} className="text-blue-500 shrink-0 mt-0.5" />
-              <span>
-                <strong>Lưu ý:</strong> Hệ thống chỉ kích hoạt nhắc nhở (reminder) đối với các
-                task <strong>có thiết lập Deadline</strong>.
-              </span>
+              <span dangerouslySetInnerHTML={{ __html: t('settings.advanced.note_deadline') }} />
             </div>
 
             <div className="space-y-6">
               {/* ── A. Toggles per classification ── */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Bật/tắt thông báo theo từng góc phần tư
+                  {t('settings.advanced.per_quadrant_title')}
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {QUADRANTS.map(({ key, title, subtitle, badgeBg }) => {
+                  {QUADRANTS.map(({ key, titleKey, subtitleKey, badgeBg }) => {
                     const isChecked = perQuadrant[key];
                     return (
                       <div
@@ -302,9 +301,9 @@ function SettingsContent() {
                           <span
                             className={`inline-block w-fit text-[11px] font-semibold px-2 py-0.5 rounded-md mb-1 ${badgeBg}`}
                           >
-                            {title}
+                            {t(titleKey)}
                           </span>
-                          <span className="text-xs text-gray-500">{subtitle}</span>
+                          <span className="text-xs text-gray-500">{t(subtitleKey)}</span>
                         </div>
 
                         {/* Switch */}
@@ -336,7 +335,7 @@ function SettingsContent() {
               <div className="pt-4 border-t border-gray-100">
                 <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
                   <Calendar size={16} className="text-gray-400" />
-                  Số ngày nhắc trước deadline
+                  {t('settings.advanced.reminder_days_title')}
                 </label>
                 <div className="flex items-center gap-3 mt-2">
                   <input
@@ -351,10 +350,10 @@ function SettingsContent() {
                     }
                     className="w-24 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-do_now focus:outline-none focus:ring-1 focus:ring-do_now transition"
                   />
-                  <span className="text-sm text-gray-600">ngày trước khi tới hạn</span>
+                  <span className="text-sm text-gray-600">{t('settings.advanced.days_before_deadline')}</span>
                 </div>
                 <p className="text-xs text-gray-400 mt-1.5">
-                  Công thức: Khi (Deadline − Hôm nay) ≤ {reminderDays ?? 2} ngày, hệ thống sẽ đưa vào danh sách nhắc nhở.
+                  {t('settings.advanced.reminder_formula', { days: reminderDays ?? 2 })}
                 </p>
               </div>
 
@@ -363,7 +362,7 @@ function SettingsContent() {
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
                     <Clock size={16} className="text-gray-400" />
-                    Khung giờ hiển thị thông báo
+                    {t('settings.advanced.time_windows_title')}
                   </label>
                   {!showAddTimeWindow && (
                     <button
@@ -375,19 +374,18 @@ function SettingsContent() {
                       className="text-xs text-do_now hover:underline font-medium flex items-center gap-1"
                     >
                       <Plus size={13} />
-                      Thêm khung giờ
+                      {t('settings.advanced.add_time_window')}
                     </button>
                   )}
                 </div>
                 <p className="text-xs text-gray-500 mb-3 leading-relaxed">
-                  Chỉ nhận thông báo khi thời gian hiện tại nằm trong bất kỳ khung giờ nào dưới đây.
-                  (Cho phép thiết lập nhiều khung giờ không liền nhau, ví dụ: 08:00 — 09:00 và 19:00 — 20:00).
+                  {t('settings.advanced.time_windows_desc')}
                 </p>
 
                 {/* List of active time windows */}
                 {timeWindows.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50/50 p-4 text-xs text-gray-500 italic text-center">
-                    Chưa thiết lập khung giờ giới hạn nào (thông báo có thể hiển thị bất kỳ lúc nào trong ngày).
+                    {t('settings.advanced.no_time_windows')}
                   </div>
                 ) : (
                   <div className="flex flex-wrap gap-2.5 mb-3">
@@ -403,8 +401,8 @@ function SettingsContent() {
                         <button
                           type="button"
                           onClick={() => handleDeleteTimeWindow(tw.id)}
-                          title={`Xoá khung giờ ${tw.fromTime} - ${tw.toTime}`}
-                          aria-label={`Xoá khung giờ ${tw.fromTime} - ${tw.toTime}`}
+                          title={t('settings.advanced.delete_window_aria', { from: tw.fromTime, to: tw.toTime })}
+                          aria-label={t('settings.advanced.delete_window_aria', { from: tw.fromTime, to: tw.toTime })}
                           className="ml-1 rounded-md p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 transition"
                         >
                           <Trash2 size={12} />
@@ -420,7 +418,7 @@ function SettingsContent() {
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-semibold text-gray-800 flex items-center gap-1.5">
                         <Clock size={13} className="text-do_now" />
-                        Thêm khung giờ thông báo mới
+                        {t('settings.advanced.add_modal.title')}
                       </span>
                       <button
                         type="button"
@@ -429,7 +427,7 @@ function SettingsContent() {
                           setTimeWindowError('');
                         }}
                         className="text-gray-400 hover:text-gray-600 rounded p-0.5"
-                        title="Đóng"
+                        title={t('settings.advanced.add_modal.close_title')}
                       >
                         <X size={15} />
                       </button>
@@ -437,7 +435,7 @@ function SettingsContent() {
 
                     <div className="flex items-center gap-3">
                       <div className="flex-1">
-                        <label className="block text-[11px] font-medium text-gray-500 mb-1">Từ giờ</label>
+                        <label className="block text-[11px] font-medium text-gray-500 mb-1">{t('settings.advanced.add_modal.from_time')}</label>
                         <input
                           type="time"
                           value={newFromTime}
@@ -452,7 +450,7 @@ function SettingsContent() {
                       <span className="text-gray-400 mt-5">—</span>
 
                       <div className="flex-1">
-                        <label className="block text-[11px] font-medium text-gray-500 mb-1">Đến giờ</label>
+                        <label className="block text-[11px] font-medium text-gray-500 mb-1">{t('settings.advanced.add_modal.to_time')}</label>
                         <input
                           type="time"
                           value={newToTime}
@@ -478,14 +476,14 @@ function SettingsContent() {
                         }}
                         className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 rounded-lg transition"
                       >
-                        Huỷ
+                        {t('settings.advanced.add_modal.cancel')}
                       </button>
                       <button
                         type="button"
                         onClick={handleAddTimeWindow}
                         className="px-3.5 py-1.5 text-xs font-semibold text-white bg-do_now hover:bg-teal-600 rounded-lg transition shadow-xs"
                       >
-                        Lưu khung giờ
+                        {t('settings.advanced.add_modal.save')}
                       </button>
                     </div>
                   </div>
@@ -502,22 +500,22 @@ function SettingsContent() {
               <div>
                 <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
                   <Tag size={18} className="text-do_now" />
-                  Nhãn tuỳ chỉnh
+                  {t('settings.custom_labels.title')}
                 </h2>
                 <p className="text-sm text-gray-500 mt-1">
-                  Danh sách các nhãn do bạn tạo thêm. Khi xoá, các task liên quan sẽ chuyển về nhãn &quot;Cá nhân&quot;.
+                  {t('settings.custom_labels.description')}
                 </p>
               </div>
               <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 shrink-0">
-                {customLabels.length} nhãn
+                {t('settings.custom_labels.labels_count', { count: customLabels.length })}
               </span>
             </div>
 
             {customLabels.length === 0 ? (
               <div className="py-8 text-center text-gray-400 text-sm">
-                <p>Chưa có nhãn tuỳ chỉnh nào.</p>
+                <p>{t('settings.custom_labels.empty_title')}</p>
                 <p className="text-xs text-gray-400 mt-1">
-                  Bạn có thể tạo nhãn mới trực tiếp từ form tạo/sửa task.
+                  {t('settings.custom_labels.empty_desc')}
                 </p>
               </div>
             ) : (
@@ -536,7 +534,10 @@ function SettingsContent() {
                           />
                           <span className="text-sm font-medium text-gray-800">{lbl.name}</span>
                           <span className="text-xs text-gray-400">
-                            ({usageCount} task{usageCount !== 1 ? 's' : ''})
+                            {t('settings.custom_labels.tasks_using', {
+                              count: usageCount,
+                              plural: usageCount !== 1 ? 's' : '',
+                            })}
                           </span>
                         </div>
 
@@ -544,8 +545,8 @@ function SettingsContent() {
                           <button
                             type="button"
                             onClick={() => isEditing ? setLabelToEdit(null) : handleOpenEditLabel(lbl)}
-                            aria-label={`Sửa nhãn ${lbl.name}`}
-                            title="Sửa nhãn"
+                            aria-label={t('settings.custom_labels.edit_aria', { name: lbl.name })}
+                            title={t('settings.custom_labels.edit_title')}
                             className={`p-1.5 rounded-lg transition ${
                               isEditing
                                 ? 'text-do_now bg-teal-50'
@@ -557,8 +558,8 @@ function SettingsContent() {
                           <button
                             type="button"
                             onClick={() => setLabelToDelete(lbl)}
-                            aria-label={`Xoá nhãn ${lbl.name}`}
-                            title="Xoá nhãn"
+                            aria-label={t('settings.custom_labels.delete_aria', { name: lbl.name })}
+                            title={t('settings.custom_labels.delete_title')}
                             className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition"
                           >
                             <Trash2 size={15} />
@@ -570,7 +571,7 @@ function SettingsContent() {
                       {isEditing && (
                         <div className="mt-1 p-4 bg-gray-50 rounded-xl border border-gray-200 flex flex-col gap-3 animate-in fade-in duration-150">
                           <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">Tên nhãn</label>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">{t('settings.custom_labels.edit_form.name_label')}</label>
                             <input
                               type="text"
                               maxLength={255}
@@ -587,7 +588,7 @@ function SettingsContent() {
                           </div>
 
                           <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1.5">Màu sắc</label>
+                            <label className="block text-xs font-medium text-gray-600 mb-1.5">{t('settings.custom_labels.edit_form.color_label')}</label>
                             <div className="flex items-center gap-2 flex-wrap">
                               {PRESET_LABEL_COLORS.map((clr) => (
                                 <button
@@ -608,9 +609,9 @@ function SettingsContent() {
                                   value={editLabelColor}
                                   onChange={(e) => setEditLabelColor(e.target.value)}
                                   className="w-6 h-6 rounded cursor-pointer border-0 p-0 bg-transparent"
-                                  title="Màu tuỳ chỉnh"
+                                  title={t('settings.custom_labels.edit_form.custom_color_title')}
                                 />
-                                <span className="text-[11px] text-gray-500">Màu khác</span>
+                                <span className="text-[11px] text-gray-500">{t('settings.custom_labels.edit_form.other_color')}</span>
                               </div>
                             </div>
                           </div>
@@ -621,14 +622,14 @@ function SettingsContent() {
                               onClick={() => setLabelToEdit(null)}
                               className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 rounded-lg transition"
                             >
-                              Huỷ
+                              {t('settings.custom_labels.edit_form.cancel')}
                             </button>
                             <button
                               type="button"
                               onClick={handleConfirmEditLabel}
                               className="px-3.5 py-1.5 text-xs font-semibold text-white bg-do_now hover:bg-teal-600 rounded-lg transition shadow-xs"
                             >
-                              Lưu thay đổi
+                              {t('settings.custom_labels.edit_form.save')}
                             </button>
                           </div>
                         </div>
@@ -648,11 +649,10 @@ function SettingsContent() {
               <div>
                 <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
                   <CheckSquare size={18} className="text-do_now" />
-                  Yêu cầu ghi chú khi Hoàn thành / Bỏ qua
+                  {t('settings.completion.title')}
                 </h2>
                 <p className="text-sm text-gray-500 mt-1 max-w-xl">
-                  Khi bật, nhấn nút Hoàn thành hoặc Bỏ qua sẽ hiện popup để bạn thêm ghi chú chi tiết.
-                  Khi tắt, hệ thống sẽ lưu trạng thái ngay lập tức mà không cần xác nhận, giúp thao tác nhanh hơn.
+                  {t('settings.completion.description')}
                 </p>
               </div>
 
@@ -687,11 +687,16 @@ function SettingsContent() {
               <div>
                 <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
                   <Zap size={18} className="text-schedule" />
-                  Tự động nâng mức khẩn cấp
+                  {t('settings.urgency.title')}
                 </h2>
                 <p className="text-sm text-gray-500 mt-1 max-w-xl">
-                  Khi deadline đến gần ngưỡng ngày bạn cài đặt, hệ thống sẽ tự động chuyển đổi hiển thị:
-                  <strong className="text-gray-700 font-medium"> Lên kế hoạch → Thực hiện ngay</strong> trên ma trận mà không thay đổi phân loại gốc của bạn.
+                  {t('settings.urgency.description_part1')}
+                  <strong className="text-gray-700 font-medium">
+                    {' '}{t('settings.urgency.description_schedule')}
+                    {t('settings.urgency.description_arrow')}
+                    {t('settings.urgency.description_do_now')}
+                  </strong>
+                  {t('settings.urgency.description_part2')}
                 </p>
               </div>
 
@@ -722,10 +727,10 @@ function SettingsContent() {
               <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in duration-150">
                 <div className="space-y-0.5">
                   <label htmlFor="urgencyThresholdInput" className="text-sm font-medium text-gray-800">
-                    Số ngày ngưỡng
+                    {t('settings.urgency.threshold_label')}
                   </label>
                   <p className="text-xs text-gray-500">
-                    Nâng cấp khi (Deadline − Hôm nay) ≤ số ngày này (ví dụ: 2 ngày).
+                    {t('settings.urgency.threshold_desc')}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -741,7 +746,7 @@ function SettingsContent() {
                     }}
                     className="w-24 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-center font-medium focus:border-schedule focus:outline-none focus:ring-1 focus:ring-schedule transition shadow-xs"
                   />
-                  <span className="text-sm text-gray-600 font-medium">ngày</span>
+                  <span className="text-sm text-gray-600 font-medium">{t('settings.urgency.days_unit')}</span>
                 </div>
               </div>
             )}
@@ -754,21 +759,22 @@ function SettingsContent() {
         isOpen={!!labelToDelete}
         onClose={() => setLabelToDelete(null)}
         onConfirm={handleConfirmDeleteLabel}
-        title="Xoá nhãn tuỳ chỉnh"
+        title={t('settings.custom_labels.delete_modal.title')}
         variant="danger"
-        confirmText="Xoá nhãn"
-        cancelText="Huỷ"
+        confirmText={t('settings.custom_labels.delete_modal.confirm')}
+        cancelText={t('settings.custom_labels.delete_modal.cancel')}
         message={
           <p className="text-gray-600">
-            Bạn có chắc chắn muốn xoá nhãn{' '}
+            {t('settings.custom_labels.delete_modal.message_prefix')}
             <strong className="text-gray-900 font-semibold">&ldquo;{labelToDelete?.name}&rdquo;</strong>?{' '}
             {labelUsageCount > 0 ? (
               <span>
-                Hiện có <strong className="text-gray-900 font-semibold">{labelUsageCount} task</strong> đang
-                sử dụng nhãn này và sẽ tự động được chuyển về nhãn mặc định &ldquo;Cá nhân&rdquo;.
+                {t('settings.custom_labels.delete_modal.has_tasks_part1')}
+                <strong className="text-gray-900 font-semibold">{labelUsageCount} {t('common.tasks')}</strong>
+                {t('settings.custom_labels.delete_modal.has_tasks_part2')}
               </span>
             ) : (
-              <span>Nhãn này hiện chưa được gán cho task nào.</span>
+              <span>{t('settings.custom_labels.delete_modal.no_tasks')}</span>
             )}
           </p>
         }

@@ -5,6 +5,7 @@ import { X, ChevronDown, Tag, CalendarRange } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useFilter } from '@/lib/filterContext';
 import { useAppStore } from '@/lib/store';
+import { useLanguage } from '@/lib/languageContext';
 
 export default function FilterBar() {
   const labels = useAppStore((s) => s.labels);
@@ -18,9 +19,17 @@ export default function FilterBar() {
     clearFilters,
     hasActiveFilters,
   } = useFilter();
+  const { t } = useLanguage();
 
   const fromInputRef = useRef<HTMLInputElement>(null);
   const toInputRef   = useRef<HTMLInputElement>(null);
+
+  const getLabelDisplayName = (lbl: { id: string; name: string; isDefault?: boolean }) => {
+    if (lbl.isDefault && (lbl.id === 'personal' || lbl.id === 'work' || lbl.id === 'learning')) {
+      return t(`labels.${lbl.id}`);
+    }
+    return lbl.name;
+  };
 
   return (
     <div className="flex flex-wrap items-center gap-3 mb-4">
@@ -38,8 +47,8 @@ export default function FilterBar() {
           <Tag size={14} />
           <span>
             {labelIds.length === 0
-              ? 'Tất cả nhãn'
-              : `${labelIds.length} nhãn đã chọn`}
+              ? t('filter.all_labels')
+              : t('filter.labels_selected', { count: labelIds.length })}
           </span>
           <ChevronDown size={14} className="text-gray-400" />
         </button>
@@ -63,7 +72,7 @@ export default function FilterBar() {
                   className="w-3 h-3 rounded-full shrink-0"
                   style={{ backgroundColor: label.color }}
                 />
-                <span className="flex-1">{label.name}</span>
+                <span className="flex-1">{getLabelDisplayName(label)}</span>
                 {checked && (
                   <span className="text-do_now text-xs">✓</span>
                 )}
@@ -87,7 +96,7 @@ export default function FilterBar() {
               }
             }}
             className="flex items-center gap-1.5 text-sm text-gray-700 hover:text-do_now transition cursor-pointer"
-            aria-label="Chọn từ ngày"
+            aria-label={t('filter.select_from_date')}
           >
             <CalendarRange size={14} className="text-gray-400 shrink-0" />
             <span>
@@ -122,7 +131,7 @@ export default function FilterBar() {
               }
             }}
             className="text-sm text-gray-700 hover:text-do_now transition cursor-pointer"
-            aria-label="Chọn đến ngày"
+            aria-label={t('filter.select_to_date')}
           >
             {dateTo
               ? format(parseISO(dateTo), 'dd/MM/yyyy')
@@ -154,11 +163,11 @@ export default function FilterBar() {
                 className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium text-white"
                 style={{ backgroundColor: label.color }}
               >
-                {label.name}
+                {getLabelDisplayName(label)}
                 <button
                   type="button"
                   onClick={() => toggleLabel(id)}
-                  aria-label={`Bỏ chọn nhãn ${label.name}`}
+                  aria-label={t('filter.deselect_label', { name: getLabelDisplayName(label) })}
                   className="ml-0.5 hover:opacity-75"
                 >
                   <X size={10} />
@@ -177,7 +186,7 @@ export default function FilterBar() {
           className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition"
         >
           <X size={14} />
-          Xoá bộ lọc
+          {t('filter.clear_filters')}
         </button>
       )}
     </div>

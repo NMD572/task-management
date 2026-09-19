@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { format, parseISO } from 'date-fns';
 import { X, Tag, CalendarDays } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
+import { useLanguage } from '@/lib/languageContext';
 import UnsavedChangesModal from '@/components/common/UnsavedChangesModal';
 import {
   type Classification,
@@ -33,11 +34,11 @@ interface FormErrors {
 }
 
 // ── Classification options ─────────────────────────────────────────────────
-const CLASSIFICATION_OPTIONS: { value: Classification; label: string; color: string }[] = [
-  { value: 'do_now',    label: 'Thực hiện ngay', color: 'bg-do_now text-white' },
-  { value: 'schedule',  label: 'Lên kế hoạch',   color: 'bg-schedule text-white' },
-  { value: 'delegate',  label: 'Ủy quyền',        color: 'bg-delegate text-white' },
-  { value: 'eliminate', label: 'Loại bỏ',          color: 'bg-eliminate text-white' },
+const CLASSIFICATION_OPTIONS: { value: Classification; labelKey: string; color: string }[] = [
+  { value: 'do_now',    labelKey: 'quadrants.do_now_title',    color: 'bg-do_now text-white' },
+  { value: 'schedule',  labelKey: 'quadrants.schedule_title',  color: 'bg-schedule text-white' },
+  { value: 'delegate',  labelKey: 'quadrants.delegate_title',  color: 'bg-delegate text-white' },
+  { value: 'eliminate', labelKey: 'quadrants.eliminate_title', color: 'bg-eliminate text-white' },
 ];
 
 const UNSELECTED_CLS = 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-50';
@@ -92,6 +93,7 @@ function getInitialValues(task?: Task) {
 
 // ── Component ──────────────────────────────────────────────────────────────
 export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: TaskFormProps) {
+  const { t }      = useLanguage();
   const labels     = useAppStore((s) => s.labels);
   const addTask    = useAppStore((s) => s.addTask);
   const updateTask = useAppStore((s) => s.updateTask);
@@ -145,22 +147,22 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
     const errs: FormErrors = {};
 
     if (!values.name.trim()) {
-      errs.name = 'Tên task không được để trống.';
+      errs.name = t('task.errors.name_required');
     } else if (values.name.length > 255) {
-      errs.name = 'Tên task tối đa 255 ký tự.';
+      errs.name = t('task.errors.name_max');
     }
 
     if (!values.labelId) {
-      errs.labelId = 'Vui lòng chọn nhãn.';
+      errs.labelId = t('task.errors.label_required');
     }
 
     if (!values.classification) {
-      errs.classification = 'Vui lòng chọn phân loại.';
+      errs.classification = t('task.errors.classification_required');
     }
 
     if (values.startDate && values.deadline) {
       if (values.deadline < values.startDate) {
-        errs.deadline = 'Deadline phải lớn hơn hoặc bằng ngày bắt đầu.';
+        errs.deadline = t('task.errors.deadline_before_start');
       }
     }
 
@@ -168,13 +170,13 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
       if (values.recurrenceMode === 'fixed_interval') {
         const interval = Number(values.recurringIntervalDays);
         if (!interval || interval <= 0) {
-          errs.recurringIntervalDays = 'Chu kỳ lặp phải lớn hơn 0.';
+          errs.recurringIntervalDays = t('task.errors.interval_positive');
         }
       } else if (values.recurrenceMode === 'month_anchor') {
         if (values.offsetDirection !== 'exact') {
           const abs = Number(values.offsetAbsDays);
           if (!abs || abs <= 0) {
-            errs.anchorOffsetDays = 'Số ngày bù phải lớn hơn 0.';
+            errs.anchorOffsetDays = t('task.errors.offset_positive');
           }
         }
       }
@@ -188,11 +190,11 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
   function handleCreateCustomLabel() {
     const trimmed = newLabelName.trim();
     if (!trimmed) {
-      setNewLabelError('Tên nhãn không được để trống.');
+      setNewLabelError(t('label_creation.errors.name_required'));
       return;
     }
     if (trimmed.length > 255) {
-      setNewLabelError('Tên nhãn tối đa 255 ký tự.');
+      setNewLabelError(t('label_creation.errors.name_max'));
       return;
     }
 
@@ -201,7 +203,7 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
       (l) => l.name.trim().toLowerCase() === trimmed.toLowerCase()
     );
     if (isDuplicate) {
-      setNewLabelError('Tên nhãn này đã tồn tại.');
+      setNewLabelError(t('label_creation.errors.duplicate'));
       return;
     }
 
@@ -286,7 +288,7 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
         {/* ── Name ── */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Tên task <span className="text-red-500">*</span>
+            {t('task.name')} <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
@@ -296,7 +298,7 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
               set('name', e.target.value);
               if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
             }}
-            placeholder="Nhập tên task..."
+            placeholder={t('task.name_placeholder')}
             className={inputCls(errors.name)}
           />
           {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
@@ -304,12 +306,12 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
 
         {/* ── Description ── */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{t('task.description')}</label>
           <textarea
             rows={3}
             value={values.description}
             onChange={(e) => set('description', e.target.value)}
-            placeholder="Thêm mô tả chi tiết (không bắt buộc)..."
+            placeholder={t('task.description_placeholder')}
             className={`${inputCls()} resize-y min-h-[80px]`}
           />
         </div>
@@ -318,7 +320,7 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Ngày bắt đầu <span className="text-red-500">*</span>
+              {t('task.start_date')} <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               {/* Clickable display — shows dd/MM/yyyy, opens native picker on click */}
@@ -363,7 +365,7 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Deadline</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('task.deadline')}</label>
             <div className="relative">
               {/* Clickable display — shows dd/MM/yyyy HH:mm, opens native datetime picker on click */}
               <button
@@ -410,7 +412,7 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
         {/* ── Label Selection & Inline Custom Label Creation ── */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Nhãn <span className="text-red-500">*</span>
+            {t('task.label')} <span className="text-red-500">*</span>
           </label>
           <div className="flex flex-col gap-2">
             <select
@@ -429,14 +431,20 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
               }}
               className={inputCls(errors.labelId)}
             >
-              <option value="">-- Chọn nhãn --</option>
-              {labels.map((lbl) => (
-                <option key={lbl.id} value={lbl.id}>
-                  {lbl.name} {lbl.isDefault ? '(Mặc định)' : ''}
-                </option>
-              ))}
+              <option value="">{t('task.label_placeholder')}</option>
+              {labels.map((lbl) => {
+                const displayName =
+                  lbl.isDefault && (lbl.id === 'personal' || lbl.id === 'work' || lbl.id === 'learning')
+                    ? t(`labels.${lbl.id}`)
+                    : lbl.name;
+                return (
+                  <option key={lbl.id} value={lbl.id}>
+                    {displayName} {lbl.isDefault ? `(${t('task.label_default_tag')})` : ''}
+                  </option>
+                );
+              })}
               <option value="__create_new__" className="font-semibold text-do_now">
-                + Tạo nhãn mới
+                + {t('task.create_new_label')}
               </option>
             </select>
 
@@ -446,13 +454,13 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
                     <Tag size={13} className="text-do_now" />
-                    Tạo nhãn tuỳ chỉnh mới
+                    {t('label_creation.box_title')}
                   </span>
                   <button
                     type="button"
                     onClick={handleCancelCreateLabel}
                     className="text-gray-400 hover:text-gray-600 rounded p-0.5"
-                    title="Đóng form tạo nhãn"
+                    title={t('label_creation.close_title')}
                   >
                     <X size={15} />
                   </button>
@@ -467,7 +475,7 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
                       setNewLabelName(e.target.value);
                       if (newLabelError) setNewLabelError('');
                     }}
-                    placeholder="Nhập tên nhãn (ví dụ: Học tập, Dự án X...)"
+                    placeholder={t('label_creation.name_placeholder')}
                     className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-800 focus:border-do_now focus:outline-none focus:ring-1 focus:ring-do_now"
                   />
                   {newLabelError && (
@@ -477,7 +485,7 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
 
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                    Chọn màu sắc nhãn:
+                    {t('label_creation.pick_color')}
                   </label>
                   <div className="flex items-center gap-2 flex-wrap">
                     {PRESET_LABEL_COLORS.map((clr) => (
@@ -499,9 +507,9 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
                         value={newLabelColor}
                         onChange={(e) => setNewLabelColor(e.target.value)}
                         className="w-6 h-6 rounded cursor-pointer border-0 p-0 bg-transparent"
-                        title="Tuỳ chỉnh màu khác"
+                        title={t('label_creation.custom_color')}
                       />
-                      <span className="text-[11px] text-gray-500">Màu khác</span>
+                      <span className="text-[11px] text-gray-500">{t('label_creation.other_color')}</span>
                     </div>
                   </div>
                 </div>
@@ -512,14 +520,14 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
                     onClick={handleCancelCreateLabel}
                     className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 rounded-lg transition"
                   >
-                    Huỷ
+                    {t('label_creation.cancel')}
                   </button>
                   <button
                     type="button"
                     onClick={handleCreateCustomLabel}
                     className="px-3.5 py-1.5 text-xs font-semibold text-white bg-do_now hover:bg-teal-600 rounded-lg transition shadow-xs"
                   >
-                    Lưu &amp; chọn nhãn
+                    {t('label_creation.save_and_select')}
                   </button>
                 </div>
               </div>
@@ -531,7 +539,7 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
         {/* ── Classification ── */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Phân loại Eisenhower <span className="text-red-500">*</span>
+            {t('task.classification')} <span className="text-red-500">*</span>
           </label>
           <div className="grid grid-cols-2 gap-2">
             {CLASSIFICATION_OPTIONS.map((opt) => {
@@ -550,7 +558,7 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
                     isSelected ? opt.color : UNSELECTED_CLS
                   }`}
                 >
-                  {opt.label}
+                  {t(opt.labelKey)}
                 </button>
               );
             })}
@@ -564,8 +572,8 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
         <div className="rounded-xl border border-gray-200 p-4 bg-gray-50/50 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-800">Lặp lại</p>
-              <p className="text-xs text-gray-500">Tự động lặp lại task theo chu kỳ</p>
+              <p className="text-sm font-medium text-gray-800">{t('task.recurring.title')}</p>
+              <p className="text-xs text-gray-500">{t('task.recurring.subtitle')}</p>
             </div>
             <button
               type="button"
@@ -589,7 +597,7 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
               {/* Recurrence Mode Selector */}
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                  Kiểu lặp lại
+                  {t('task.recurring.mode_label')}
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
@@ -601,7 +609,7 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
                         : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
                     }`}
                   >
-                    Chu kỳ cố định
+                    {t('task.recurring.fixed_interval')}
                   </button>
                   <button
                     type="button"
@@ -612,7 +620,7 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
                         : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
                     }`}
                   >
-                    Ngày đặc biệt trong tháng
+                    {t('task.recurring.month_anchor')}
                   </button>
                 </div>
               </div>
@@ -621,7 +629,7 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
               {values.recurrenceMode === 'fixed_interval' && (
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Chu kỳ lặp (số ngày) <span className="text-red-500">*</span>
+                    {t('task.recurring.interval_label')} <span className="text-red-500">*</span>
                   </label>
                   <div className="flex items-center gap-2">
                     <input
@@ -636,7 +644,7 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
                       }}
                       className="w-32 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-do_now focus:outline-none focus:ring-1 focus:ring-do_now"
                     />
-                    <span className="text-xs text-gray-500">ngày / lần</span>
+                    <span className="text-xs text-gray-500">{t('task.recurring.interval_unit')}</span>
                   </div>
                   {errors.recurringIntervalDays && (
                     <p className="mt-1 text-xs text-red-500">{errors.recurringIntervalDays}</p>
@@ -648,7 +656,7 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
               {values.recurrenceMode === 'month_anchor' && (
                 <div className="flex flex-col gap-2.5">
                   <label className="block text-xs font-medium text-gray-700">
-                    Quy tắc ngày trong tháng <span className="text-red-500">*</span>
+                    {t('task.recurring.month_rule_label')} <span className="text-red-500">*</span>
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     {/* Anchor: Start vs End of month */}
@@ -657,8 +665,8 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
                       onChange={(e) => set('monthAnchor', e.target.value as MonthAnchor)}
                       className="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-800 focus:border-do_now focus:outline-none focus:ring-1 focus:ring-do_now"
                     >
-                      <option value="start_of_month">Đầu tháng</option>
-                      <option value="end_of_month">Cuối tháng</option>
+                      <option value="start_of_month">{t('task.recurring.month_start')}</option>
+                      <option value="end_of_month">{t('task.recurring.month_end')}</option>
                     </select>
 
                     {/* Direction: Before / After / Exact */}
@@ -678,9 +686,9 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
                       }}
                       className="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-800 focus:border-do_now focus:outline-none focus:ring-1 focus:ring-do_now"
                     >
-                      <option value="exact">Đúng ngày đó</option>
-                      <option value="before">Trước</option>
-                      <option value="after">Sau</option>
+                      <option value="exact">{t('task.recurring.exact_day')}</option>
+                      <option value="before">{t('task.recurring.before_day')}</option>
+                      <option value="after">{t('task.recurring.after_day')}</option>
                     </select>
 
                     {/* Offset Days (hidden when Exact) */}
@@ -697,14 +705,14 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
                               setErrors((prev) => ({ ...prev, anchorOffsetDays: undefined }));
                             }
                           }}
-                          placeholder="Số ngày"
+                          placeholder={t('task.recurring.offset_placeholder')}
                           className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-do_now focus:outline-none focus:ring-1 focus:ring-do_now"
                         />
-                        <span className="text-xs text-gray-500 shrink-0">ngày</span>
+                        <span className="text-xs text-gray-500 shrink-0">{t('task.recurring.offset_unit')}</span>
                       </div>
                     ) : (
                       <div className="flex items-center text-xs text-gray-400 italic px-2">
-                        (Khớp ngày đầu/cuối tháng)
+                        {t('task.recurring.match_anchor_note')}
                       </div>
                     )}
                   </div>
@@ -714,7 +722,7 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
                   )}
 
                   <p className="text-[11px] text-gray-500 italic mt-0.5">
-                    Ví dụ: &ldquo;Cuối tháng&rdquo; + &ldquo;Trước&rdquo; + &ldquo;2 ngày&rdquo; sẽ tự động rơi vào 26/02 hoặc 28/04 hoặc 29/05 tuỳ từng tháng.
+                    {t('task.recurring.example_note')}
                   </p>
                 </div>
               )}
@@ -723,10 +731,10 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
               <div className="flex items-center justify-between pt-2 border-t border-gray-200">
                 <div>
                   <label className="text-sm font-medium text-gray-700 block">
-                    Chỉ lặp khi hoàn thành task trước
+                    {t('task.recurring.only_repeat_prev_done')}
                   </label>
                   <p className="text-[11px] text-gray-500">
-                    Nếu tắt: task mới sẽ tự sinh khi ngày tới hạn, không phụ thuộc task trước
+                    {t('task.recurring.only_repeat_prev_done_note')}
                   </p>
                 </div>
                 <button
@@ -756,13 +764,13 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
             onClick={onCancel}
             className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
           >
-            Huỷ
+            {t('common.cancel')}
           </button>
           <button
             type="submit"
             className="rounded-lg bg-do_now px-5 py-2 text-sm font-medium text-white hover:bg-teal-600 transition"
           >
-            {task ? 'Lưu thay đổi' : 'Thêm task'}
+            {task ? t('task.save_changes') : t('task.add_task')}
           </button>
         </div>
       </form>
@@ -777,8 +785,10 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
           setNewLabelName('');
           setNewLabelError('');
         }}
-        title="Huỷ tạo nhãn mới?"
-        message="Tên nhãn đang nhập sẽ không được lưu. Bạn có chắc muốn huỷ không?"
+        title={t('label_creation.discard_modal.title')}
+        message={t('label_creation.discard_modal.message')}
+        continueText={t('label_creation.discard_modal.continue_edit')}
+        discardText={t('label_creation.discard_modal.discard')}
       />
     </>
   );

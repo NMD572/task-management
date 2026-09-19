@@ -4,6 +4,7 @@ import { useMemo, useEffect } from 'react';
 import { parseISO, startOfDay, endOfDay, format } from 'date-fns';
 import { useAppStore } from '@/lib/store';
 import { useFilter } from '@/lib/filterContext';
+import { useLanguage } from '@/lib/languageContext';
 import { ensureUpcomingOccurrences } from '@/lib/recurring';
 import { applyUrgencyAutoUpgrade } from '@/lib/urgency';
 import QuadrantColumn from './QuadrantColumn';
@@ -54,6 +55,7 @@ export default function MatrixBoard() {
   const setTasks         = useAppStore((s) => s.setTasks);
   const urgencyConfig    = useAppStore((s) => s.urgencyConfig);
   const { searchText, labelIds, dateFrom, dateTo } = useFilter();
+  const { t } = useLanguage();
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
 
@@ -135,7 +137,7 @@ export default function MatrixBoard() {
   }, [filteredTasks, urgencyConfig, taskCompletions, todayStr]);
 
   return (
-    <section aria-label="Ma trận Eisenhower">
+    <section aria-label={t('quadrants.matrix_aria')}>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {QUADRANT_ORDER.map((cls) => (
           <QuadrantColumn

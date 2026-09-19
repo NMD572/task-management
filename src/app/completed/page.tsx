@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import { FilterProvider } from '@/lib/filterContext';
+import { useLanguage } from '@/lib/languageContext';
 import { useAppStore } from '@/lib/store';
 import type { TaskCompletion } from '@/lib/types';
 
@@ -28,6 +29,7 @@ function getDefaultDateTo() {
 }
 
 function CompletedTasksContent() {
+  const { t }        = useLanguage();
   const router       = useRouter();
   const pathname     = usePathname();
   const searchParams = useSearchParams();
@@ -132,7 +134,7 @@ function CompletedTasksContent() {
                   }
                 }}
                 className="flex items-center gap-1.5 text-sm text-gray-700 hover:text-do_now transition cursor-pointer"
-                aria-label="Chọn từ ngày"
+                aria-label={t('filter.from_date_aria')}
               >
                 <Calendar size={14} className="text-gray-400 shrink-0" />
                 <span>
@@ -167,7 +169,7 @@ function CompletedTasksContent() {
                   }
                 }}
                 className="text-sm text-gray-700 hover:text-do_now transition cursor-pointer"
-                aria-label="Chọn đến ngày"
+                aria-label={t('filter.to_date_aria')}
               >
                 {dateTo
                   ? format(parseISO(dateTo), 'dd/MM/yyyy')
@@ -192,7 +194,7 @@ function CompletedTasksContent() {
             onClick={clearFilter}
             className="px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-200 rounded-lg transition"
           >
-            Xoá bộ lọc
+            {t('filter.clear_filter')}
           </button>
         </div>
 
@@ -203,12 +205,12 @@ function CompletedTasksContent() {
             className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-do_now transition"
           >
             <ArrowLeft size={16} />
-            Quay lại Ma trận
+            {t('completed.back_to_matrix')}
           </Link>
 
           <span className="inline-flex items-center gap-1 text-xs font-semibold text-gray-600 bg-white px-3 py-1.5 rounded-full border border-gray-200 shadow-xs">
             <History size={13} className="text-do_now" />
-            {filteredCompletions.length} công việc đã xử lý
+            {t('completed.tasks_processed', { count: filteredCompletions.length })}
           </span>
         </div>
 
@@ -219,9 +221,9 @@ function CompletedTasksContent() {
               <CheckCircle2 size={20} />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Task đã hoàn thành &amp; bỏ qua</h1>
+              <h1 className="text-2xl font-bold text-gray-900">{t('completed.title')}</h1>
               <p className="text-sm text-gray-500 mt-0.5">
-                Lịch sử toàn bộ các công việc đã được xử lý theo từng ngày
+                {t('completed.subtitle')}
               </p>
             </div>
           </div>
@@ -231,9 +233,9 @@ function CompletedTasksContent() {
         {filteredCompletions.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center text-gray-400 shadow-sm">
             <CheckCircle2 size={44} className="mx-auto text-gray-300 mb-3" />
-            <p className="text-base font-semibold text-gray-700">Chưa có task nào được xử lý</p>
+            <p className="text-base font-semibold text-gray-700">{t('completed.empty_title')}</p>
             <p className="text-xs text-gray-400 mt-1 max-w-sm mx-auto">
-              Khi bạn đánh dấu Hoàn thành hoặc Bỏ qua một task trong Ma trận, lịch sử xử lý sẽ xuất hiện tại đây.
+              {t('completed.empty_description')}
             </p>
           </div>
         ) : (
@@ -267,12 +269,12 @@ function CompletedTasksContent() {
                       {isCompleted ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                           <Check size={12} strokeWidth={2.5} />
-                          Hoàn thành
+                          {t('completed.status_completed')}
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
                           <Ban size={12} />
-                          Bỏ qua
+                          {t('completed.status_skipped')}
                         </span>
                       )}
                     </div>
@@ -284,7 +286,9 @@ function CompletedTasksContent() {
                         style={{ backgroundColor: label.color }}
                       >
                         <Tag size={10} />
-                        {label.name}
+                        {label.isDefault && (label.id === 'personal' || label.id === 'work' || label.id === 'learning')
+                          ? t(`labels.${label.id}`)
+                          : label.name}
                       </span>
                     )}
                   </div>
@@ -296,7 +300,7 @@ function CompletedTasksContent() {
                         isCompleted ? 'text-gray-900' : 'text-gray-600'
                       }`}
                     >
-                      {task ? task.name : <span className="italic text-gray-400">(Task đã xoá)</span>}
+                      {task ? task.name : <span className="italic text-gray-400">{t('completed.task_deleted')}</span>}
                     </h3>
                   </div>
 
@@ -305,7 +309,7 @@ function CompletedTasksContent() {
                     <div className="flex items-start gap-2 text-xs text-gray-600 bg-gray-50 rounded-xl p-3 border border-gray-100">
                       <MessageSquare size={14} className="text-do_now shrink-0 mt-0.5" />
                       <div className="flex-1">
-                        <span className="font-semibold text-gray-700 not-italic block mb-0.5">Ghi chú:</span>
+                        <span className="font-semibold text-gray-700 not-italic block mb-0.5">{t('completed.note_label')}</span>
                         <p className="italic leading-relaxed whitespace-pre-wrap">{tc.note}</p>
                       </div>
                     </div>

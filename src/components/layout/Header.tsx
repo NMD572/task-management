@@ -7,6 +7,7 @@ import { Search, Globe, Plus, X, Settings, CheckSquare } from 'lucide-react';
 import TaskModal from '@/components/task/TaskModal';
 import GoogleLoginButton from '@/components/auth/GoogleLoginButton';
 import { useFilter } from '@/lib/filterContext';
+import { useLanguage } from '@/lib/languageContext';
 
 export default function Header() {
   const pathname = usePathname();
@@ -16,6 +17,7 @@ export default function Header() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const { searchText, setSearchText } = useFilter();
+  const { language, toggleLanguage, t } = useLanguage();
 
   // Debounce URL update: update local input immediately, push to context after 300ms
   const [localSearch, setLocalSearch] = useState(searchText);
@@ -45,7 +47,7 @@ export default function Header() {
           <Link
             href="/"
             className="flex items-center gap-2 shrink-0 group focus:outline-none"
-            title="Trang chủ Eisenhower Matrix"
+            title={t('header.home_title')}
           >
             <div className="grid grid-cols-2 gap-0.5 w-6 h-6 group-hover:scale-105 transition-transform">
               <div className="rounded-sm bg-do_now" />
@@ -54,7 +56,7 @@ export default function Header() {
               <div className="rounded-sm bg-eliminate" />
             </div>
             <span className="hidden sm:block font-bold text-gray-800 text-lg leading-none whitespace-nowrap group-hover:text-do_now transition-colors">
-              Eisenhower
+              {t('header.title')}
             </span>
           </Link>
 
@@ -70,14 +72,14 @@ export default function Header() {
                   type="text"
                   value={localSearch}
                   onChange={(e) => handleSearchChange(e.target.value)}
-                  placeholder="Tìm kiếm task..."
+                  placeholder={t('header.search_placeholder')}
                   className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pl-9 pr-9 text-sm text-gray-800 placeholder-gray-400 focus:border-do_now focus:bg-white focus:outline-none focus:ring-1 focus:ring-do_now transition"
                 />
                 {localSearch && (
                   <button
                     type="button"
                     onClick={handleClearSearch}
-                    aria-label="Xoá tìm kiếm"
+                    aria-label={t('header.clear_search')}
                     className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-gray-400 hover:text-gray-700"
                   >
                     <X size={14} />
@@ -98,13 +100,13 @@ export default function Header() {
               className="flex items-center gap-1.5 rounded-lg bg-do_now px-3 py-2 text-sm font-medium text-white hover:bg-teal-600 transition shadow-sm"
             >
               <Plus size={16} />
-              <span className="hidden sm:inline">Thêm task</span>
+              <span className="hidden sm:inline">{t('header.add_task')}</span>
             </button>
 
             {/* Completed tasks history link */}
             <Link
               href="/completed"
-              title="Lịch sử task đã hoàn thành & bỏ qua"
+              title={t('header.completed_tasks_title')}
               className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-sm font-medium transition ${
                 isCompletedPage
                   ? 'border-do_now bg-teal-50 text-do_now'
@@ -112,24 +114,24 @@ export default function Header() {
               }`}
             >
               <CheckSquare size={16} />
-              <span className="hidden md:inline">Đã xử lý</span>
+              <span className="hidden md:inline">{t('header.completed_tasks')}</span>
             </Link>
 
-            {/* Language toggle placeholder */}
+            {/* Language toggle */}
             <button
               type="button"
-              title="Đổi ngôn ngữ"
-              className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 transition"
-              disabled
+              onClick={toggleLanguage}
+              title={t('header.change_language')}
+              className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition cursor-pointer"
             >
               <Globe size={16} />
-              <span className="hidden sm:inline">VI</span>
+              <span className="font-semibold text-xs">{language.toUpperCase()}</span>
             </button>
 
             {/* Settings link */}
             <Link
               href="/settings"
-              title="Cài đặt"
+              title={t('header.settings')}
               className={`flex items-center justify-center rounded-lg border px-2.5 py-2 text-sm font-medium transition ${
                 isSettingsPage
                   ? 'border-do_now bg-teal-50 text-do_now'

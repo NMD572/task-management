@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { AlertCircle } from 'lucide-react';
+import { useLanguage } from '@/lib/languageContext';
 
 export interface UnsavedChangesModalProps {
   isOpen: boolean;
@@ -17,11 +18,17 @@ export default function UnsavedChangesModal({
   isOpen,
   onContinue,
   onDiscard,
-  title = 'Huỷ thay đổi?',
-  message = 'Bạn có các thay đổi chưa được lưu. Bạn có chắc chắn muốn huỷ bỏ không?',
-  continueText = 'Tiếp tục sửa',
-  discardText = 'Huỷ bỏ',
+  title,
+  message,
+  continueText,
+  discardText,
 }: UnsavedChangesModalProps) {
+  const { t } = useLanguage();
+
+  const effectiveTitle = title ?? t('unsaved_modal.default_title');
+  const effectiveMessage = message ?? t('unsaved_modal.default_message');
+  const effectiveContinueText = continueText ?? t('unsaved_modal.btn_continue');
+  const effectiveDiscardText = discardText ?? t('unsaved_modal.btn_discard');
   // Close confirmation on Escape by choosing to continue editing (keep modal open)
   useEffect(() => {
     if (!isOpen) return;
@@ -48,7 +55,7 @@ export default function UnsavedChangesModal({
       <div
         role="dialog"
         aria-modal="true"
-        aria-label={title}
+        aria-label={effectiveTitle}
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-sm rounded-2xl bg-white shadow-2xl p-5 border border-gray-100 flex flex-col gap-3 animate-in zoom-in-95 duration-150"
       >
@@ -56,10 +63,10 @@ export default function UnsavedChangesModal({
           <div className="w-8 h-8 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
             <AlertCircle size={16} />
           </div>
-          <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
+          <h3 className="text-sm font-semibold text-gray-900">{effectiveTitle}</h3>
         </div>
 
-        <p className="text-xs text-gray-500 leading-relaxed">{message}</p>
+        <p className="text-xs text-gray-500 leading-relaxed">{effectiveMessage}</p>
 
         <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-gray-100">
           <button
@@ -67,14 +74,14 @@ export default function UnsavedChangesModal({
             onClick={onContinue}
             className="rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition shadow-xs"
           >
-            {continueText}
+            {effectiveContinueText}
           </button>
           <button
             type="button"
             onClick={onDiscard}
             className="rounded-lg bg-red-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-red-700 transition shadow-xs"
           >
-            {discardText}
+            {effectiveDiscardText}
           </button>
         </div>
       </div>

@@ -2,36 +2,37 @@
 
 import TaskCard from '@/components/task/TaskCard';
 import type { Classification, Task } from '@/lib/types';
+import { useLanguage } from '@/lib/languageContext';
 
 // ── Quadrant metadata ──────────────────────────────────────────────────────
 const QUADRANT_META: Record<
   Classification,
-  { title: string; subtitle: string; headerBg: string; borderColor: string; countBg: string }
+  { titleKey: string; subtitleKey: string; headerBg: string; borderColor: string; countBg: string }
 > = {
   do_now: {
-    title:       'Thực hiện ngay',
-    subtitle:    'Quan trọng & Khẩn cấp',
+    titleKey:    'quadrants.do_now_title',
+    subtitleKey: 'quadrants.do_now_subtitle',
     headerBg:    'bg-do_now',
     borderColor: 'border-do_now/30',
     countBg:     'bg-teal-50 text-do_now',
   },
   schedule: {
-    title:       'Lên kế hoạch',
-    subtitle:    'Quan trọng & Không khẩn cấp',
+    titleKey:    'quadrants.schedule_title',
+    subtitleKey: 'quadrants.schedule_subtitle',
     headerBg:    'bg-schedule',
     borderColor: 'border-schedule/30',
     countBg:     'bg-amber-50 text-schedule',
   },
   delegate: {
-    title:       'Ủy quyền',
-    subtitle:    'Không quan trọng & Khẩn cấp',
+    titleKey:    'quadrants.delegate_title',
+    subtitleKey: 'quadrants.delegate_subtitle',
     headerBg:    'bg-delegate',
     borderColor: 'border-delegate/30',
     countBg:     'bg-pink-50 text-delegate',
   },
   eliminate: {
-    title:       'Loại bỏ',
-    subtitle:    'Không quan trọng & Không khẩn cấp',
+    titleKey:    'quadrants.eliminate_title',
+    subtitleKey: 'quadrants.eliminate_subtitle',
     headerBg:    'bg-eliminate',
     borderColor: 'border-eliminate/30',
     countBg:     'bg-purple-50 text-eliminate',
@@ -46,6 +47,7 @@ interface QuadrantColumnProps {
 
 // ── Component ──────────────────────────────────────────────────────────────
 export default function QuadrantColumn({ classification, tasks }: QuadrantColumnProps) {
+  const { t } = useLanguage();
   const meta = QUADRANT_META[classification];
 
   return (
@@ -53,8 +55,8 @@ export default function QuadrantColumn({ classification, tasks }: QuadrantColumn
       {/* ── Column header (sticky top) ── */}
       <div className={`${meta.headerBg} px-4 py-3 flex items-center justify-between sticky top-0 z-10 shrink-0`}>
         <div>
-          <h2 className="text-sm font-bold text-white leading-tight">{meta.title}</h2>
-          <p className="text-xs text-white/80 mt-0.5">{meta.subtitle}</p>
+          <h2 className="text-sm font-bold text-white leading-tight">{t(meta.titleKey)}</h2>
+          <p className="text-xs text-white/80 mt-0.5">{t(meta.subtitleKey)}</p>
         </div>
         {/* Task count badge */}
         <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${meta.countBg}`}>
@@ -66,8 +68,8 @@ export default function QuadrantColumn({ classification, tasks }: QuadrantColumn
       <div className="flex-1 p-3 flex flex-col gap-2 min-h-[180px] max-h-[420px] overflow-y-auto">
         {tasks.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center py-6 text-gray-400">
-            <p className="text-sm">Chưa có task nào</p>
-            <p className="text-xs mt-1 text-gray-300">Bấm &quot;+ Thêm task&quot; để bắt đầu</p>
+            <p className="text-sm">{t('quadrants.empty_title')}</p>
+            <p className="text-xs mt-1 text-gray-300">{t('quadrants.empty_cta')}</p>
           </div>
         ) : (
           tasks.map((task) => (

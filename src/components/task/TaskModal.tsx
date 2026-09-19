@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { X } from 'lucide-react';
 import TaskForm from './TaskForm';
 import UnsavedChangesModal from '@/components/common/UnsavedChangesModal';
+import { useLanguage } from '@/lib/languageContext';
 import type { Task } from '@/lib/types';
 
 interface TaskModalProps {
@@ -14,6 +15,7 @@ interface TaskModalProps {
 }
 
 export default function TaskModal({ task, isOpen, onClose }: TaskModalProps) {
+  const { t } = useLanguage();
   const dialogRef = useRef<HTMLDivElement>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
@@ -63,6 +65,8 @@ export default function TaskModal({ task, isOpen, onClose }: TaskModalProps) {
 
   if (!isOpen) return null;
 
+  const modalTitle = task ? t('task.edit_title') : t('task.create_title');
+
   return (
     <>
       {/* Backdrop */}
@@ -80,18 +84,18 @@ export default function TaskModal({ task, isOpen, onClose }: TaskModalProps) {
           ref={dialogRef}
           role="dialog"
           aria-modal="true"
-          aria-label={task ? 'Sửa task' : 'Thêm task mới'}
+          aria-label={modalTitle}
           className="w-full max-w-lg rounded-2xl bg-white shadow-xl flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-150"
         >
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
             <h2 className="text-lg font-semibold text-gray-800">
-              {task ? 'Sửa task' : 'Thêm task mới'}
+              {modalTitle}
             </h2>
             <button
               type="button"
               onClick={handleRequestClose}
-              aria-label="Đóng"
+              aria-label={t('common.close')}
               className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition"
             >
               <X size={18} />
@@ -119,8 +123,6 @@ export default function TaskModal({ task, isOpen, onClose }: TaskModalProps) {
           setIsDirty(false);
           onClose();
         }}
-        title="Huỷ thay đổi?"
-        message="Các thông tin bạn vừa chỉnh sửa chưa được lưu. Bạn có chắc muốn huỷ bỏ và đóng không?"
       />
     </>
   );

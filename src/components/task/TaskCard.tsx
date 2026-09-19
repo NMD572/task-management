@@ -17,6 +17,7 @@ import TaskModal from './TaskModal';
 import ConfirmModal from '@/components/common/ConfirmModal';
 import UnsavedChangesModal from '@/components/common/UnsavedChangesModal';
 import { useAppStore } from '@/lib/store';
+import { useLanguage } from '@/lib/languageContext';
 import { generateNextOccurrence } from '@/lib/recurring';
 import { getRecurrenceMode, type Task, type TaskCompletionStatus } from '@/lib/types';
 
@@ -25,6 +26,7 @@ interface TaskCardProps {
 }
 
 export default function TaskCard({ task }: TaskCardProps) {
+  const { t } = useLanguage();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
@@ -160,8 +162,8 @@ export default function TaskCard({ task }: TaskCardProps) {
             <button
               type="button"
               onClick={() => setEditOpen(true)}
-              aria-label="Sửa task"
-              title="Sửa task"
+              aria-label={t('task_card.edit_task')}
+              title={t('task_card.edit_task')}
               className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition"
             >
               <Pencil size={13} />
@@ -169,8 +171,8 @@ export default function TaskCard({ task }: TaskCardProps) {
             <button
               type="button"
               onClick={() => setDeleteModalOpen(true)}
-              aria-label="Xoá task"
-              title="Xoá task"
+              aria-label={t('task_card.delete_task')}
+              title={t('task_card.delete_task')}
               className="rounded-lg p-1 text-gray-400 hover:bg-red-50 hover:text-red-500 transition"
             >
               <Trash2 size={13} />
@@ -187,7 +189,9 @@ export default function TaskCard({ task }: TaskCardProps) {
               style={{ backgroundColor: label.color }}
             >
               <Tag size={10} />
-              {label.name}
+              {label.isDefault && (label.id === 'personal' || label.id === 'work' || label.id === 'learning')
+                ? t(`labels.${label.id}`)
+                : label.name}
             </span>
           )}
 
@@ -212,7 +216,7 @@ export default function TaskCard({ task }: TaskCardProps) {
           {task.isRecurring && (() => {
             const mode = getRecurrenceMode(task);
             if (mode === 'month_anchor') {
-              const anchorText = task.monthAnchor === 'start_of_month' ? 'Đầu tháng' : 'Cuối tháng';
+              const anchorText = task.monthAnchor === 'start_of_month' ? t('task.recurring.month_start') : t('task.recurring.month_end');
               const offset = task.anchorOffsetDays ?? 0;
               const offsetText =
                 offset === 0
@@ -221,16 +225,18 @@ export default function TaskCard({ task }: TaskCardProps) {
                   ? `-${Math.abs(offset)}d`
                   : `+${offset}d`;
               const badgeText = `${anchorText}${offsetText ? ` ${offsetText}` : ''}`;
+              const offsetDesc = offset === 0
+                ? t('task_card.offset_exact')
+                : offset < 0
+                ? t('task_card.offset_before', { days: Math.abs(offset) })
+                : t('task_card.offset_after', { days: offset });
+              const conditionDesc = task.onlyRepeatWhenPrevDone
+                ? t('task_card.condition_prev_done')
+                : t('task_card.condition_fixed');
               return (
                 <span
                   className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-600"
-                  title={`Lặp lại hàng tháng: ${anchorText} ${
-                    offset === 0
-                      ? '(đúng ngày)'
-                      : offset < 0
-                      ? `(trước ${Math.abs(offset)} ngày)`
-                      : `(sau ${offset} ngày)`
-                  } ${task.onlyRepeatWhenPrevDone ? '– khi hoàn thành' : '– cố định'}`}
+                  title={t('task_card.recurring_month_title', { anchor: anchorText, offset: offsetDesc, condition: conditionDesc })}
                 >
                   <Repeat size={10} />
                   {badgeText}
@@ -238,12 +244,13 @@ export default function TaskCard({ task }: TaskCardProps) {
                 </span>
               );
             }
+            const intervalCondition = task.onlyRepeatWhenPrevDone
+              ? t('task_card.condition_interval_prev_done')
+              : t('task_card.condition_interval_fixed');
             return (
               <span
                 className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-600"
-                title={`Lặp lại mỗi ${task.recurringIntervalDays} ngày ${
-                  task.onlyRepeatWhenPrevDone ? '(khi hoàn thành/bỏ qua)' : '(cố định)'
-                }`}
+                title={t('task_card.recurring_interval_title', { days: task.recurringIntervalDays ?? 1, condition: intervalCondition })}
               >
                 <Repeat size={10} />
                 {task.recurringIntervalDays}d
@@ -269,12 +276,12 @@ export default function TaskCard({ task }: TaskCardProps) {
               {isCompletedToday ? (
                 <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs font-medium text-emerald-700">
                   <Check size={12} strokeWidth={2.5} />
-                  Đã hoàn thành
+                  {t('task_card.completed_status')}
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 border border-amber-200 px-2 py-0.5 text-xs font-medium text-amber-700">
                   <Ban size={12} />
-                  Đã bỏ qua
+                  {t('task_card.skipped_status')}
                 </span>
               )}
 
@@ -282,11 +289,11 @@ export default function TaskCard({ task }: TaskCardProps) {
               <button
                 type="button"
                 onClick={() => removeTaskCompletion(task.id, todayStr)}
-                title="Huỷ đánh dấu hôm nay"
+                title={t('task_card.undo_completion')}
                 className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-red-500 transition py-0.5 px-1.5 rounded hover:bg-gray-100"
               >
                 <RotateCcw size={11} />
-                Huỷ
+                {t('task_card.undo')}
               </button>
             </div>
           ) : (
@@ -298,7 +305,7 @@ export default function TaskCard({ task }: TaskCardProps) {
                 className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50/80 hover:bg-emerald-100 text-emerald-700 px-2.5 py-1.5 text-xs font-semibold transition shadow-xs"
               >
                 <Check size={13} strokeWidth={2.5} />
-                Hoàn thành
+                {t('task_card.complete_btn')}
               </button>
 
               <button
@@ -307,7 +314,7 @@ export default function TaskCard({ task }: TaskCardProps) {
                 className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50/80 hover:bg-amber-100 text-amber-700 px-2.5 py-1.5 text-xs font-semibold transition shadow-xs"
               >
                 <Ban size={13} />
-                Bỏ qua
+                {t('task_card.skip_btn')}
               </button>
             </div>
           )}
@@ -326,15 +333,15 @@ export default function TaskCard({ task }: TaskCardProps) {
         isOpen={deleteModalOpen}
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={handleConfirmDelete}
-        title="Xoá task"
+        title={t('task_card.delete_modal.title')}
         variant="danger"
-        confirmText="Xoá task"
-        cancelText="Huỷ"
+        confirmText={t('task_card.delete_modal.confirm')}
+        cancelText={t('task_card.delete_modal.cancel')}
         message={
           <p className="text-gray-600">
-            Bạn có chắc chắn muốn xoá task{' '}
-            <strong className="text-gray-900 font-semibold">&ldquo;{task.name}&rdquo;</strong> không?
-            Hành động này không thể hoàn tác.
+            {t('task_card.delete_modal.message_prefix')}
+            <strong className="text-gray-900 font-semibold">&ldquo;{task.name}&rdquo;</strong>
+            {t('task_card.delete_modal.message_suffix')}
           </p>
         }
       />
@@ -346,29 +353,29 @@ export default function TaskCard({ task }: TaskCardProps) {
         onConfirm={handleConfirmCompletion}
         title={
           completionModal?.status === 'completed'
-            ? 'Hoàn thành task hôm nay'
-            : 'Bỏ qua task hôm nay'
+            ? t('task_card.completion_modal.complete_title')
+            : t('task_card.completion_modal.skip_title')
         }
         variant={completionModal?.status === 'completed' ? 'primary' : 'warning'}
         confirmText={
           completionModal?.status === 'completed'
-            ? 'Xác nhận hoàn thành'
-            : 'Xác nhận bỏ qua'
+            ? t('task_card.completion_modal.complete_confirm')
+            : t('task_card.completion_modal.skip_confirm')
         }
-        cancelText="Huỷ"
+        cancelText={t('task_card.completion_modal.cancel')}
         message={
           <p className="text-gray-600">
             {completionModal?.status === 'completed' ? (
               <span>
-                Xác nhận hoàn thành task{' '}
-                <strong className="text-gray-900 font-semibold">&ldquo;{task.name}&rdquo;</strong> cho
-                ngày hôm nay ({format(new Date(), 'dd/MM/yyyy')})?
+                {t('task_card.completion_modal.complete_message_prefix')}
+                <strong className="text-gray-900 font-semibold">&ldquo;{task.name}&rdquo;</strong>
+                {t('task_card.completion_modal.message_today', { date: format(new Date(), 'dd/MM/yyyy') })}
               </span>
             ) : (
               <span>
-                Đánh dấu không thể hoàn thành task{' '}
-                <strong className="text-gray-900 font-semibold">&ldquo;{task.name}&rdquo;</strong> cho
-                ngày hôm nay ({format(new Date(), 'dd/MM/yyyy')})?
+                {t('task_card.completion_modal.skip_message_prefix')}
+                <strong className="text-gray-900 font-semibold">&ldquo;{task.name}&rdquo;</strong>
+                {t('task_card.completion_modal.message_today', { date: format(new Date(), 'dd/MM/yyyy') })}
               </span>
             )}
           </p>
@@ -376,7 +383,7 @@ export default function TaskCard({ task }: TaskCardProps) {
       >
         <div className="flex flex-col gap-1.5 pt-1">
           <label className="text-xs font-medium text-gray-700">
-            Ghi chú thêm (không bắt buộc):
+            {t('task_card.completion_modal.note_label')}
           </label>
           <textarea
             rows={3}
@@ -384,8 +391,8 @@ export default function TaskCard({ task }: TaskCardProps) {
             onChange={(e) => setCompletionNote(e.target.value)}
             placeholder={
               completionModal?.status === 'completed'
-                ? 'Nhập kết quả, kinh nghiệm hoặc cảm nhận...'
-                : 'Nhập lý do không thể hoàn thành...'
+                ? t('task_card.completion_modal.complete_note_placeholder')
+                : t('task_card.completion_modal.skip_note_placeholder')
             }
             className="w-full rounded-lg border border-gray-300 p-2.5 text-sm bg-white focus:border-do_now focus:outline-none focus:ring-1 focus:ring-do_now resize-y min-h-[80px]"
           />
@@ -401,8 +408,10 @@ export default function TaskCard({ task }: TaskCardProps) {
           setCompletionModal(null);
           setCompletionNote('');
         }}
-        title="Huỷ ghi chú?"
-        message="Nội dung ghi chú bạn đang nhập sẽ bị mất. Bạn có chắc muốn huỷ không?"
+        title={t('task_card.completion_modal.discard_title')}
+        message={t('task_card.completion_modal.discard_message')}
+        continueText={t('unsaved_modal.continue_editing')}
+        discardText={t('unsaved_modal.discard_changes')}
       />
     </>
   );

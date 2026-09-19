@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, ReactNode } from 'react';
 import { X, Trash2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useLanguage } from '@/lib/languageContext';
 
 export interface ConfirmModalProps {
   isOpen: boolean;
@@ -21,12 +22,16 @@ export default function ConfirmModal({
   onConfirm,
   title,
   message,
-  confirmText = 'Xác nhận',
-  cancelText = 'Huỷ',
+  confirmText,
+  cancelText,
   variant = 'danger',
   children,
 }: ConfirmModalProps) {
+  const { t } = useLanguage();
   const dialogRef = useRef<HTMLDivElement>(null);
+
+  const effectiveConfirmText = confirmText ?? t('common.confirm');
+  const effectiveCancelText = cancelText ?? t('common.cancel');
 
   // Close on Escape key
   useEffect(() => {
@@ -109,7 +114,7 @@ export default function ConfirmModal({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Đóng"
+            aria-label={t('common.close')}
             className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition"
           >
             <X size={18} />
@@ -129,14 +134,14 @@ export default function ConfirmModal({
             onClick={onClose}
             className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition shadow-xs"
           >
-            {cancelText}
+            {effectiveCancelText}
           </button>
           <button
             type="button"
             onClick={onConfirm}
             className={`rounded-lg px-4 py-2 text-sm font-medium transition shadow-sm ${vStyle.btnBg}`}
           >
-            {confirmText}
+            {effectiveConfirmText}
           </button>
         </div>
       </div>

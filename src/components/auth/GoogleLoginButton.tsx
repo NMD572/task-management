@@ -3,6 +3,7 @@
 import { useGoogleLogin } from '@react-oauth/google';
 import { LogOut, User as UserIcon } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
+import { useLanguage } from '@/lib/languageContext';
 
 // FE-only auth: không xác thực token ở server, chỉ dùng để cá nhân hoá UI, KHÔNG bảo vệ dữ liệu.
 
@@ -10,6 +11,7 @@ export default function GoogleLoginButton() {
   const userProfile      = useAppStore((s) => s.userProfile);
   const setUserProfile   = useAppStore((s) => s.setUserProfile);
   const clearUserProfile = useAppStore((s) => s.clearUserProfile);
+  const { t } = useLanguage();
 
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
@@ -88,8 +90,8 @@ export default function GoogleLoginButton() {
         <button
           type="button"
           onClick={clearUserProfile}
-          title="Đăng xuất"
-          aria-label="Đăng xuất"
+          title={t('header.logout')}
+          aria-label={t('header.logout')}
           className="flex items-center gap-1 rounded-lg border border-gray-200 p-2 text-sm font-medium text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition"
         >
           <LogOut size={15} />
@@ -103,7 +105,7 @@ export default function GoogleLoginButton() {
     <button
       type="button"
       onClick={handleLoginClick}
-      title="Đăng nhập với Google"
+      title={t('header.login_google')}
       className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition shrink-0"
     >
       {/* Google "G" icon */}
@@ -125,7 +127,7 @@ export default function GoogleLoginButton() {
           d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
         />
       </svg>
-      <span className="hidden sm:inline">Đăng nhập</span>
+      <span className="hidden sm:inline">{t('header.login_google')}</span>
     </button>
   );
 }
