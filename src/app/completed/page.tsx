@@ -1,8 +1,9 @@
 'use client';
 
-import { Suspense, useMemo, useState, useRef } from 'react';
+import { Suspense, useMemo, useState, useRef, useEffect, useCallback, useTransition } from 'react';
 import Link from 'next/link';
-import { format, parseISO, startOfWeek, endOfWeek } from 'date-fns';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { format, parseISO } from 'date-fns';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -18,16 +19,86 @@ import { FilterProvider } from '@/lib/filterContext';
 import { useAppStore } from '@/lib/store';
 import type { TaskCompletion } from '@/lib/types';
 
+// Default date range: today (From = today, To = today, ISO yyyy-MM-dd)
+function getDefaultDateFrom() {
+  return format(new Date(), 'yyyy-MM-dd');
+}
+function getDefaultDateTo() {
+  return format(new Date(), 'yyyy-MM-dd');
+}
+
 function CompletedTasksContent() {
+  const router       = useRouter();
+  const pathname     = usePathname();
+  const searchParams = useSearchParams();
+  const [, startTransition] = useTransition();
+
   const taskCompletions = useAppStore((s) => s.taskCompletions);
   const tasks           = useAppStore((s) => s.tasks);
   const labels          = useAppStore((s) => s.labels);
 
-  // Default date range: start and end of current week (ISO yyyy-MM-dd)
-  const defaultFrom = format(startOfWeek(new Date()), 'yyyy-MM-dd');
-  const defaultTo   = format(endOfWeek(new Date()), 'yyyy-MM-dd');
-  const [dateFrom, setDateFrom] = useState(defaultFrom);
-  const [dateTo,   setDateTo]   = useState(defaultTo);
+  const defaultFrom = getDefaultDateFrom();
+  const defaultTo   = getDefaultDateTo();
+
+  // Read initial dates from URL query params or fallback to current week
+  const [dateFrom, setDateFrom] = useState(() => searchParams.get('from') || defaultFrom);
+  const [dateTo,   setDateTo]   = useState(() => searchParams.get('to')   || defaultTo);
+
+  // Sync state with URL when back/forward navigation occurs
+  useEffect(() => {
+    const urlFrom = searchParams.get('from');
+    const urlTo   = searchParams.get('to');
+    setDateFrom(urlFrom || defaultFrom);
+    setDateTo(urlTo     || defaultTo);
+  }, [searchParams, defaultFrom, defaultTo]);
+
+  // Push filter to URL query params (?from=...&to=...)
+  const pushURL = useCallback(
+    (newFrom: string, newTo: string) => {
+      startTransition(() => {
+        const params = new URLSearchParams(searchParams.toString());
+        const isCustom = newFrom !== defaultFrom || newTo !== defaultTo;
+        if (isCustom) {
+          if (newFrom) params.set('from', newFrom);
+          else params.delete('from');
+          if (newTo) params.set('to', newTo);
+          else params.delete('to');
+        } else {
+          params.delete('from');
+          params.delete('to');
+        }
+        const str = params.toString();
+        router.replace(`${pathname}${str ? `?${str}` : ''}`, { scroll: false });
+      });
+    },
+    [router, pathname, searchParams, defaultFrom, defaultTo]
+  );
+
+  // Handle date changes with range auto-correction and URL sync
+  const handleSetDateFrom = (newFrom: string) => {
+    const adjustedTo = dateTo && newFrom && dateTo < newFrom ? newFrom : dateTo;
+    setDateFrom(newFrom);
+    if (adjustedTo !== dateTo) {
+      setDateTo(adjustedTo);
+    }
+    pushURL(newFrom, adjustedTo);
+  };
+
+  const handleSetDateTo = (newTo: string) => {
+    const adjustedFrom = dateFrom && newTo && dateFrom > newTo ? newTo : dateFrom;
+    setDateTo(newTo);
+    if (adjustedFrom !== dateFrom) {
+      setDateFrom(adjustedFrom);
+    }
+    pushURL(adjustedFrom, newTo);
+  };
+
+  // Clear filter resets to current week and cleans URL
+  const clearFilter = () => {
+    setDateFrom(defaultFrom);
+    setDateTo(defaultTo);
+    pushURL(defaultFrom, defaultTo);
+  };
 
   // Refs for showPicker()
   const fromInputRef = useRef<HTMLInputElement>(null);
@@ -40,12 +111,6 @@ function CompletedTasksContent() {
     });
     return [...filtered].sort((a, b) => b.date.localeCompare(a.date));
   }, [taskCompletions, dateFrom, dateTo]);
-
-  // Clear filter resets to current week
-  const clearFilter = () => {
-    setDateFrom(defaultFrom);
-    setDateTo(defaultTo);
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -81,10 +146,10 @@ function CompletedTasksContent() {
                 ref={fromInputRef}
                 type="date"
                 value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
+                onChange={(e) => handleSetDateFrom(e.target.value)}
                 aria-hidden="true"
                 tabIndex={-1}
-                className="absolute opacity-0 pointer-events-none w-0 h-0"
+                className="absolute inset-0 opacity-0 pointer-events-none w-full h-full"
               />
             </div>
 
@@ -114,10 +179,10 @@ function CompletedTasksContent() {
                 type="date"
                 value={dateTo}
                 min={dateFrom}
-                onChange={(e) => setDateTo(e.target.value)}
+                onChange={(e) => handleSetDateTo(e.target.value)}
                 aria-hidden="true"
                 tabIndex={-1}
-                className="absolute opacity-0 pointer-events-none w-0 h-0"
+                className="absolute inset-0 opacity-0 pointer-events-none w-full h-full"
               />
             </div>
           </div>

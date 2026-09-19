@@ -162,10 +162,16 @@ export function ensureUpcomingOccurrences(
       return a.startDate.localeCompare(b.startDate);
     });
 
-    let currentTemplate =
-      sortedExisting.find((t) => t.isRecurring) ||
-      sortedExisting[sortedExisting.length - 1] ||
-      genTask;
+    // Determine the latest occurrence to continue generation forward
+    const latestOcc = sortedExisting[sortedExisting.length - 1] || genTask;
+    let currentTemplate: Task = {
+      ...latestOcc,
+      isRecurring: true,
+      recurrenceMode: getRecurrenceMode(genTask),
+      recurringIntervalDays: genTask.recurringIntervalDays,
+      monthAnchor: genTask.monthAnchor,
+      anchorOffsetDays: genTask.anchorOffsetDays,
+    };
 
     let iterations = 0;
     const MAX_ITERATIONS = 120; // Safe limit (covers daily tasks for 30+ days or monthly tasks for years)

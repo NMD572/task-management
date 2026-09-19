@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useEffect, useRef } from 'react';
+import { useMemo, useEffect } from 'react';
 import { parseISO, startOfDay, endOfDay, format } from 'date-fns';
 import { useAppStore } from '@/lib/store';
 import { useFilter } from '@/lib/filterContext';
@@ -59,10 +59,8 @@ export default function MatrixBoard() {
 
   // Pre-generate upcoming occurrences for fixed recurring tasks (onlyRepeatWhenPrevDone = false)
   // Look-ahead window: 30 days into the future
-  const hasProcessedRef = useRef(false);
   useEffect(() => {
-    if (allTasks.length > 0 && !hasProcessedRef.current) {
-      hasProcessedRef.current = true;
+    if (allTasks.length > 0) {
       const updated = ensureUpcomingOccurrences(allTasks, 30);
       if (updated.length !== allTasks.length) {
         setTasks(updated);
