@@ -1,8 +1,8 @@
 'use client';
 
-import { Suspense, useMemo } from 'react';
+import { Suspense, useMemo, useState, useRef } from 'react';
 import Link from 'next/link';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, startOfWeek, endOfWeek } from 'date-fns';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -23,18 +23,114 @@ function CompletedTasksContent() {
   const tasks           = useAppStore((s) => s.tasks);
   const labels          = useAppStore((s) => s.labels);
 
-  // Sort completions by date descending (newest first)
-  const sortedCompletions = useMemo(() => {
-    return [...taskCompletions].sort((a, b) => {
-      return b.date.localeCompare(a.date);
+  // Default date range: start and end of current week (ISO yyyy-MM-dd)
+  const defaultFrom = format(startOfWeek(new Date()), 'yyyy-MM-dd');
+  const defaultTo   = format(endOfWeek(new Date()), 'yyyy-MM-dd');
+  const [dateFrom, setDateFrom] = useState(defaultFrom);
+  const [dateTo,   setDateTo]   = useState(defaultTo);
+
+  // Refs for showPicker()
+  const fromInputRef = useRef<HTMLInputElement>(null);
+  const toInputRef   = useRef<HTMLInputElement>(null);
+
+  // Filter completions by selected date range (inclusive) and sort descending
+  const filteredCompletions = useMemo(() => {
+    const filtered = taskCompletions.filter((tc) => {
+      return tc.date >= dateFrom && tc.date <= dateTo;
     });
-  }, [taskCompletions]);
+    return [...filtered].sort((a, b) => b.date.localeCompare(a.date));
+  }, [taskCompletions, dateFrom, dateTo]);
+
+  // Clear filter resets to current week
+  const clearFilter = () => {
+    setDateFrom(defaultFrom);
+    setDateTo(defaultTo);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header />
 
       <main className="flex-1 mx-auto w-full max-w-4xl px-4 py-8">
+        {/* Date range filter */}
+        <div className="flex items-center gap-3 mb-6 flex-wrap">
+          <div className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
+            {/* From date */}
+            <div className="relative flex items-center">
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    fromInputRef.current?.showPicker();
+                  } catch {
+                    fromInputRef.current?.focus();
+                  }
+                }}
+                className="flex items-center gap-1.5 text-sm text-gray-700 hover:text-do_now transition cursor-pointer"
+                aria-label="Chọn từ ngày"
+              >
+                <Calendar size={14} className="text-gray-400 shrink-0" />
+                <span>
+                  {dateFrom
+                    ? format(parseISO(dateFrom), 'dd/MM/yyyy')
+                    : <span className="text-gray-400">dd/MM/yyyy</span>
+                  }
+                </span>
+              </button>
+              <input
+                ref={fromInputRef}
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                aria-hidden="true"
+                tabIndex={-1}
+                className="absolute opacity-0 pointer-events-none w-0 h-0"
+              />
+            </div>
+
+            <span className="text-gray-400 select-none">→</span>
+
+            {/* To date */}
+            <div className="relative flex items-center">
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    toInputRef.current?.showPicker();
+                  } catch {
+                    toInputRef.current?.focus();
+                  }
+                }}
+                className="text-sm text-gray-700 hover:text-do_now transition cursor-pointer"
+                aria-label="Chọn đến ngày"
+              >
+                {dateTo
+                  ? format(parseISO(dateTo), 'dd/MM/yyyy')
+                  : <span className="text-gray-400">dd/MM/yyyy</span>
+                }
+              </button>
+              <input
+                ref={toInputRef}
+                type="date"
+                value={dateTo}
+                min={dateFrom}
+                onChange={(e) => setDateTo(e.target.value)}
+                aria-hidden="true"
+                tabIndex={-1}
+                className="absolute opacity-0 pointer-events-none w-0 h-0"
+              />
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={clearFilter}
+            className="px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-200 rounded-lg transition"
+          >
+            Xoá bộ lọc
+          </button>
+        </div>
+
         {/* ── Breadcrumb / Header Navigation ── */}
         <div className="mb-6 flex items-center justify-between">
           <Link
@@ -47,7 +143,7 @@ function CompletedTasksContent() {
 
           <span className="inline-flex items-center gap-1 text-xs font-semibold text-gray-600 bg-white px-3 py-1.5 rounded-full border border-gray-200 shadow-xs">
             <History size={13} className="text-do_now" />
-            {sortedCompletions.length} công việc đã xử lý
+            {filteredCompletions.length} công việc đã xử lý
           </span>
         </div>
 
@@ -67,7 +163,7 @@ function CompletedTasksContent() {
         </div>
 
         {/* ── Content List ── */}
-        {sortedCompletions.length === 0 ? (
+        {filteredCompletions.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center text-gray-400 shadow-sm">
             <CheckCircle2 size={44} className="mx-auto text-gray-300 mb-3" />
             <p className="text-base font-semibold text-gray-700">Chưa có task nào được xử lý</p>
@@ -77,7 +173,7 @@ function CompletedTasksContent() {
           </div>
         ) : (
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden divide-y divide-gray-100">
-            {sortedCompletions.map((tc: TaskCompletion, idx: number) => {
+            {filteredCompletions.map((tc: TaskCompletion, idx: number) => {
               const task = tasks.find((t) => t.id === tc.taskId);
               const label = task ? labels.find((l) => l.id === task.labelId) : null;
               const isCompleted = tc.status === 'completed';
@@ -158,6 +254,7 @@ function CompletedTasksContent() {
     </div>
   );
 }
+
 
 export default function CompletedTasksPage() {
   return (

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { format } from 'date-fns';
-import { X, Tag } from 'lucide-react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { format, parseISO } from 'date-fns';
+import { X, Tag, CalendarDays } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import UnsavedChangesModal from '@/components/common/UnsavedChangesModal';
 import {
@@ -99,6 +99,10 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
 
   const [values, setValues] = useState(getInitialValues(task));
   const [errors, setErrors] = useState<FormErrors>({});
+
+  // Refs for native date picker showPicker()
+  const startDateRef = useRef<HTMLInputElement>(null);
+  const deadlineRef  = useRef<HTMLInputElement>(null);
 
   // ── Inline Custom Label State ──
   const [showCreateLabel, setShowCreateLabel] = useState(false);
@@ -316,15 +320,43 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Ngày bắt đầu <span className="text-red-500">*</span>
             </label>
-            <input
-              type="date"
-              value={values.startDate}
-              onChange={(e) => {
-                set('startDate', e.target.value);
-                if (errors.startDate) setErrors((prev) => ({ ...prev, startDate: undefined }));
-              }}
-              className={inputCls(errors.startDate)}
-            />
+            <div className="relative">
+              {/* Clickable display — shows dd/MM/yyyy, opens native picker on click */}
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    startDateRef.current?.showPicker();
+                  } catch {
+                    startDateRef.current?.focus();
+                  }
+                }}
+                className={`w-full flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm text-left cursor-pointer transition ${
+                  errors.startDate
+                    ? 'border-red-400'
+                    : 'border-gray-300 hover:border-do_now focus:border-do_now focus:ring-1 focus:ring-do_now'
+                }`}
+              >
+                <span className={values.startDate ? 'text-gray-800' : 'text-gray-400'}>
+                  {values.startDate
+                    ? format(parseISO(values.startDate), 'dd/MM/yyyy')
+                    : 'dd/MM/yyyy'}
+                </span>
+                <CalendarDays size={15} className="text-gray-400 shrink-0" />
+              </button>
+              <input
+                ref={startDateRef}
+                type="date"
+                value={values.startDate}
+                onChange={(e) => {
+                  set('startDate', e.target.value);
+                  if (errors.startDate) setErrors((prev) => ({ ...prev, startDate: undefined }));
+                }}
+                aria-hidden="true"
+                tabIndex={-1}
+                className="absolute inset-0 opacity-0 pointer-events-none w-full h-full"
+              />
+            </div>
             {errors.startDate && (
               <p className="mt-1 text-xs text-red-500">{errors.startDate}</p>
             )}
@@ -332,15 +364,43 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Deadline</label>
-            <input
-              type="datetime-local"
-              value={values.deadline}
-              onChange={(e) => {
-                set('deadline', e.target.value);
-                if (errors.deadline) setErrors((prev) => ({ ...prev, deadline: undefined }));
-              }}
-              className={inputCls(errors.deadline)}
-            />
+            <div className="relative">
+              {/* Clickable display — shows dd/MM/yyyy HH:mm, opens native datetime picker on click */}
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    deadlineRef.current?.showPicker();
+                  } catch {
+                    deadlineRef.current?.focus();
+                  }
+                }}
+                className={`w-full flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm text-left cursor-pointer transition ${
+                  errors.deadline
+                    ? 'border-red-400'
+                    : 'border-gray-300 hover:border-do_now focus:border-do_now focus:ring-1 focus:ring-do_now'
+                }`}
+              >
+                <span className={values.deadline ? 'text-gray-800' : 'text-gray-400'}>
+                  {values.deadline
+                    ? format(parseISO(values.deadline), 'dd/MM/yyyy HH:mm')
+                    : 'dd/MM/yyyy HH:mm'}
+                </span>
+                <CalendarDays size={15} className="text-gray-400 shrink-0" />
+              </button>
+              <input
+                ref={deadlineRef}
+                type="datetime-local"
+                value={values.deadline}
+                onChange={(e) => {
+                  set('deadline', e.target.value);
+                  if (errors.deadline) setErrors((prev) => ({ ...prev, deadline: undefined }));
+                }}
+                aria-hidden="true"
+                tabIndex={-1}
+                className="absolute inset-0 opacity-0 pointer-events-none w-full h-full"
+              />
+            </div>
             {errors.deadline && (
               <p className="mt-1 text-xs text-red-500">{errors.deadline}</p>
             )}
