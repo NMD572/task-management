@@ -13,6 +13,7 @@ import {
   Tag,
   MessageSquare,
   History,
+  X,
 } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import { FilterProvider } from '@/lib/filterContext';
@@ -95,12 +96,14 @@ function CompletedTasksContent() {
     pushURL(adjustedFrom, newTo);
   };
 
-  // Clear filter resets to current week and cleans URL
+  // Clear filter resets to default (today) and cleans URL
   const clearFilter = () => {
     setDateFrom(defaultFrom);
     setDateTo(defaultTo);
     pushURL(defaultFrom, defaultTo);
   };
+
+  const hasActiveFilters = dateFrom !== defaultFrom || dateTo !== defaultTo;
 
   // Refs for showPicker()
   const fromInputRef = useRef<HTMLInputElement>(null);
@@ -189,13 +192,17 @@ function CompletedTasksContent() {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={clearFilter}
-            className="px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-200 rounded-lg transition"
-          >
-            {t('filter.clear_filter')}
-          </button>
+          {/* Clear filter button - only show when filters are active, matching MatrixBoard FilterBar */}
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={clearFilter}
+              className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition"
+            >
+              <X size={14} />
+              {t('filter.clear_filter')}
+            </button>
+          )}
         </div>
 
         {/* ── Breadcrumb / Header Navigation ── */}
