@@ -27,6 +27,8 @@
     "add_task": "Thêm task",
     "completed_tasks": "Đã xử lý",
     "completed_tasks_title": "Lịch sử task đã hoàn thành & bỏ qua",
+    "motivation": "Tạo động lực",
+    "motivation_title": "Bảng Habit Tracker — Tạo động lực",
     "change_language": "Đổi ngôn ngữ",
     "settings": "Cài đặt",
     "login_google": "Đăng nhập Google",
@@ -306,5 +308,20 @@
       "threshold_desc": "Nâng cấp khi (Deadline − Hôm nay) ≤ số ngày này (ví dụ: 2 ngày).",
       "days_unit": "ngày"
     }
+  },
+  "motivation": {
+    "title": "Tạo động lực",
+    "subtitle": "Theo dõi thói quen và tỷ lệ hoàn thành từng ngày",
+    "back_to_matrix": "Quay lại Ma trận",
+    "no_tasks": "Chưa có task nào để hiển thị",
+    "no_tasks_desc": "Hãy tạo task mới hoặc mở rộng khoảng ngày lọc",
+    "col_task": "Task",
+    "col_rate": "%",
+    "col_progress": "Tiến độ",
+    "status_completed": "Đã hoàn thành",
+    "status_skipped": "Đã bỏ qua",
+    "status_pending": "Chưa xử lý — click để hoàn thành nhanh",
+    "status_inactive": "Task không active ngày này",
+    "clear_filter": "Xoá bộ lọc"
   }
 }

@@ -27,6 +27,8 @@
     "add_task": "Add task",
     "completed_tasks": "Processed",
     "completed_tasks_title": "Completed & Skipped task history",
+    "motivation": "Habit Tracker",
+    "motivation_title": "Habit Tracker — Motivation Board",
     "change_language": "Switch language",
     "settings": "Settings",
     "login_google": "Sign in with Google",
@@ -306,5 +308,20 @@
       "threshold_desc": "Upgrade when (Deadline − Today) ≤ this number of days (e.g. 2 days).",
       "days_unit": "days"
     }
+  },
+  "motivation": {
+    "title": "Motivation Board",
+    "subtitle": "Track habits and daily completion rates",
+    "back_to_matrix": "Back to Matrix",
+    "no_tasks": "No tasks to display",
+    "no_tasks_desc": "Create a new task or expand the date range",
+    "col_task": "Task",
+    "col_rate": "%",
+    "col_progress": "Progress",
+    "status_completed": "Completed",
+    "status_skipped": "Skipped",
+    "status_pending": "Pending — click to quick-complete",
+    "status_inactive": "Task not active on this day",
+    "clear_filter": "Clear filter"
   }
 }

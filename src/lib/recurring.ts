@@ -10,7 +10,7 @@ import {
   startOfDay,
   differenceInDays,
 } from 'date-fns';
-import { getRecurrenceMode, type MonthAnchor, type Task } from './types';
+import { getRecurrenceMode, type MonthAnchor, type Task, type TaskCompletion } from './types';
 
 /**
  * Calculates a date anchored to the start or end of a given month, with offset days.
@@ -164,13 +164,17 @@ export function ensureUpcomingOccurrences(
 
     // Determine the latest occurrence to continue generation forward
     const latestOcc = sortedExisting[sortedExisting.length - 1] || genTask;
+    if (!latestOcc.isRecurring) {
+      continue;
+    }
+
     let currentTemplate: Task = {
       ...latestOcc,
       isRecurring: true,
-      recurrenceMode: getRecurrenceMode(genTask),
-      recurringIntervalDays: genTask.recurringIntervalDays,
-      monthAnchor: genTask.monthAnchor,
-      anchorOffsetDays: genTask.anchorOffsetDays,
+      recurrenceMode: getRecurrenceMode(latestOcc),
+      recurringIntervalDays: latestOcc.recurringIntervalDays ?? genTask.recurringIntervalDays,
+      monthAnchor: latestOcc.monthAnchor ?? genTask.monthAnchor,
+      anchorOffsetDays: latestOcc.anchorOffsetDays ?? genTask.anchorOffsetDays,
     };
 
     let iterations = 0;
@@ -200,6 +204,100 @@ export function ensureUpcomingOccurrences(
       // Advance template to continue computing forward within horizon
       currentTemplate = nextOcc;
     }
+  }
+
+  return resultTasks;
+}
+
+/**
+ * Prompt 29: When editing an occurrence belonging to a recurring series with onlyRepeatWhenPrevDone = false:
+ * 1. Update the target occurrence with new fields (keeping its id and seriesId).
+ * 2. Delete ALL other occurrences in the same series with startDate > target occurrence startDate,
+ *    EXCEPT occurrences that already have a TaskCompletion (recorded in taskCompletions).
+ *    Occurrences with startDate <= target occurrence startDate are preserved untouched.
+ * 3. If target occurrence isRecurring = true:
+ *    Regenerate upcoming occurrences from immediately after target occurrence up to today + lookAheadDays (30 days),
+ *    using the newly updated config.
+ * 4. Returns the updated tasks array.
+ */
+export function updateRecurringSeriesOccurrences(
+  tasks: Task[],
+  updatedTask: Task,
+  taskCompletions: TaskCompletion[] = [],
+  lookAheadDays: number = 30
+): Task[] {
+  const seriesId = updatedTask.seriesId ?? updatedTask.id;
+  const completedTaskIds = new Set(taskCompletions.map((tc) => tc.taskId));
+  const targetStartDate = updatedTask.startDate;
+
+  // 1. Filter out future occurrences of the same series (startDate > updatedTask.startDate)
+  // unless they have a completion recorded. Also replace the edited task with updatedTask.
+  const resultTasks: Task[] = [];
+  for (const t of tasks) {
+    if (t.id === updatedTask.id) {
+      resultTasks.push({
+        ...updatedTask,
+        seriesId,
+      });
+      continue;
+    }
+
+    const tSeriesId = t.seriesId ?? t.id;
+    if (tSeriesId === seriesId) {
+      // Same series: delete future occurrences (startDate > targetStartDate) unless already completed
+      if (t.startDate > targetStartDate && !completedTaskIds.has(t.id)) {
+        continue;
+      }
+    }
+
+    resultTasks.push(t);
+  }
+
+  // 2. If recurrence is disabled on the updated task, do not generate new occurrences
+  if (!updatedTask.isRecurring) {
+    return resultTasks;
+  }
+
+  // 3. Regenerate future occurrences for this series using the NEW CONFIG
+  const today = startOfDay(new Date());
+  const horizon = startOfDay(addDays(today, lookAheadDays));
+
+  const existingSeriesDates = new Set(
+    resultTasks
+      .filter((t) => (t.seriesId ?? t.id) === seriesId)
+      .map((t) => t.startDate)
+  );
+
+  let currentTemplate: Task = {
+    ...updatedTask,
+    seriesId,
+    isRecurring: true,
+  };
+
+  let iterations = 0;
+  const MAX_ITERATIONS = 120;
+
+  while (iterations < MAX_ITERATIONS) {
+    iterations++;
+
+    const nextOcc = generateNextOccurrence(currentTemplate);
+    if (!nextOcc) {
+      break;
+    }
+
+    const nextStartDay = startOfDay(parseISO(nextOcc.startDate));
+    if (isAfter(nextStartDay, horizon)) {
+      break;
+    }
+
+    // Only add if no occurrence on this date exists for this series
+    if (!existingSeriesDates.has(nextOcc.startDate)) {
+      existingSeriesDates.add(nextOcc.startDate);
+      resultTasks.push(nextOcc);
+    }
+
+    // Advance template forward
+    currentTemplate = nextOcc;
   }
 
   return resultTasks;

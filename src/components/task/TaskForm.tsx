@@ -252,17 +252,17 @@ export default function TaskForm({ task, onSuccess, onCancel, onDirtyChange }: T
       labelId:        values.labelId,
       classification: values.classification as Classification,
       isRecurring:    values.isRecurring,
-      ...(values.isRecurring && {
-        recurrenceMode:         values.recurrenceMode,
-        onlyRepeatWhenPrevDone: values.onlyRepeatWhenPrevDone,
-        ...(values.recurrenceMode === 'fixed_interval' && {
-          recurringIntervalDays: Number(values.recurringIntervalDays),
-        }),
-        ...(values.recurrenceMode === 'month_anchor' && {
-          monthAnchor:      values.monthAnchor,
-          anchorOffsetDays: computedOffset,
-        }),
-      }),
+      recurrenceMode:         values.isRecurring ? values.recurrenceMode : undefined,
+      onlyRepeatWhenPrevDone: values.isRecurring ? values.onlyRepeatWhenPrevDone : false,
+      recurringIntervalDays:  values.isRecurring && values.recurrenceMode === 'fixed_interval'
+        ? Number(values.recurringIntervalDays)
+        : undefined,
+      monthAnchor:            values.isRecurring && values.recurrenceMode === 'month_anchor'
+        ? values.monthAnchor
+        : undefined,
+      anchorOffsetDays:       values.isRecurring && values.recurrenceMode === 'month_anchor'
+        ? computedOffset
+        : undefined,
     };
 
     if (task) {

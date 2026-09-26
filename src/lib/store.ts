@@ -10,6 +10,7 @@ import type {
   UrgencyAutoUpgradeConfig,
   UserProfile,
 } from './types';
+import { updateRecurringSeriesOccurrences } from './recurring';
 
 // ── Default labels (seeded on first init) ──────────────────────────────────
 const DEFAULT_LABELS: Label[] = [
@@ -117,11 +118,39 @@ export const useAppStore = create<AppState>()(
         }),
 
       updateTask: (id, updates) =>
-        set((state) => ({
-          tasks: state.tasks.map((task) =>
-            task.id === id ? { ...task, ...updates } : task
-          ),
-        })),
+        set((state) => {
+          const currentTask = state.tasks.find((t) => t.id === id);
+          if (!currentTask) return state;
+
+          const updatedTask: Task = {
+            ...currentTask,
+            ...updates,
+          };
+
+          // Prompt 29: Check if this task belongs to a recurring series with onlyRepeatWhenPrevDone = false
+          // Note: if onlyRepeatWhenPrevDone is true, Requirement 3 states:
+          // "Nếu series có onlyRepeatWhenPrevDone=true: KHÔNG áp dụng logic này — loại đó không pre-generate occurrence tương lai"
+          const isFixedRecurringSeries =
+            (currentTask.isRecurring || updatedTask.isRecurring) &&
+            !currentTask.onlyRepeatWhenPrevDone &&
+            !updatedTask.onlyRepeatWhenPrevDone;
+
+          if (isFixedRecurringSeries) {
+            const newTasks = updateRecurringSeriesOccurrences(
+              state.tasks,
+              updatedTask,
+              state.taskCompletions,
+              30
+            );
+            return { tasks: newTasks };
+          }
+
+          return {
+            tasks: state.tasks.map((task) =>
+              task.id === id ? updatedTask : task
+            ),
+          };
+        }),
 
       deleteTask: (id) =>
         set((state) => ({

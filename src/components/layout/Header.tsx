@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Search, Globe, Plus, X, Settings, CheckSquare } from 'lucide-react';
+import { Search, Globe, Plus, X, Settings, CheckSquare, BarChart2 } from 'lucide-react';
 import TaskModal from '@/components/task/TaskModal';
 // import GoogleLoginButton from '@/components/auth/GoogleLoginButton';
 import { useFilter } from '@/lib/filterContext';
@@ -14,6 +14,7 @@ export default function Header() {
   const isHomePage = pathname === '/';
   const isSettingsPage = pathname === '/settings';
   const isCompletedPage = pathname === '/completed';
+  const isMotivationPage = pathname === '/motivation';
 
   const [modalOpen, setModalOpen] = useState(false);
   const { searchText, setSearchText } = useFilter();
@@ -115,6 +116,20 @@ export default function Header() {
             >
               <CheckSquare size={16} />
               <span className="hidden md:inline">{t('header.completed_tasks')}</span>
+            </Link>
+
+            {/* Motivation / Habit Tracker link */}
+            <Link
+              href="/motivation"
+              title={t('header.motivation_title')}
+              className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-sm font-medium transition ${
+                isMotivationPage
+                  ? 'border-do_now bg-teal-50 text-do_now'
+                  : 'border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+              }`}
+            >
+              <BarChart2 size={16} />
+              <span className="hidden md:inline">{t('header.motivation')}</span>
             </Link>
 
             {/* Language toggle */}

@@ -61,6 +61,9 @@ export default function MatrixBoard() {
 
   // Pre-generate upcoming occurrences for fixed recurring tasks (onlyRepeatWhenPrevDone = false)
   // Look-ahead window: 30 days into the future
+  // IMPORTANT: use a stable dependency (task IDs joined) to avoid re-running after setTasks updates allTasks,
+  // which would cause an infinite loop: ensureUpcomingOccurrences → setTasks → allTasks changes → re-run → ...
+  const taskIdsKey = allTasks.map((t) => t.id).join(',');
   useEffect(() => {
     if (allTasks.length > 0) {
       const updated = ensureUpcomingOccurrences(allTasks, 30);
@@ -68,7 +71,8 @@ export default function MatrixBoard() {
         setTasks(updated);
       }
     }
-  }, [allTasks, setTasks]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taskIdsKey, setTasks]);
 
   // Apply filters — never mutate store.tasks
   const filteredTasks = useMemo(() => {
