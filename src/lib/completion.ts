@@ -48,3 +48,58 @@ export function calculateCompletionRate(
   if (activeDays === 0) return 0;
   return Math.round((completedDays / activeDays) * 100);
 }
+
+/**
+ * Tính % hoàn thành của một chuỗi task (series) trong khoảng [rangeStart, rangeEnd].
+ *
+ * - Mẫu số (activeDays): tổng số ngày trong range mà series có occurrence active
+ *   (với task không deadline: ngày = startDate; với task có deadline: startDate <= ngày <= deadline;
+ *    hoặc ngày có TaskCompletion).
+ * - Tử số (completedDays): số ngày có TaskCompletion.status === 'completed' thuộc series.
+ * - Trả về Math.round(completedDays / activeDays * 100), hoặc 0 nếu activeDays = 0.
+ */
+export function calculateSeriesCompletionRate(
+  seriesTasks: Task[],
+  seriesId: string,
+  completions: TaskCompletion[],
+  rangeStart: Date,
+  rangeEnd: Date
+): number {
+  const days = eachDayOfInterval({ start: rangeStart, end: rangeEnd });
+  const seriesTaskIds = new Set(seriesTasks.map((t) => t.id));
+  seriesTaskIds.add(seriesId);
+
+  let activeDays = 0;
+  let completedDays = 0;
+
+  for (const day of days) {
+    const dayStr = format(day, 'yyyy-MM-dd');
+
+    const completion = completions.find(
+      (c) => (seriesTaskIds.has(c.taskId) || c.taskId === seriesId) && c.date === dayStr
+    );
+
+    if (completion) {
+      activeDays++;
+      if (completion.status === 'completed') {
+        completedDays++;
+      }
+      continue;
+    }
+
+    const isActive = seriesTasks.some((t) => {
+      if (!t.deadline) {
+        return t.startDate === dayStr;
+      }
+      const deadlineDateStr = t.deadline.split('T')[0];
+      return t.startDate <= dayStr && dayStr <= deadlineDateStr;
+    });
+
+    if (isActive) {
+      activeDays++;
+    }
+  }
+
+  if (activeDays === 0) return 0;
+  return Math.round((completedDays / activeDays) * 100);
+}

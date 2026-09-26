@@ -1,15 +1,24 @@
 'use client';
 
 import { useMemo } from 'react';
-import { format, parseISO, eachDayOfInterval, isBefore, isAfter, startOfDay } from 'date-fns';
+import { format, eachDayOfInterval } from 'date-fns';
 import { Check, Ban } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { useLanguage } from '@/lib/languageContext';
-import { calculateCompletionRate } from '@/lib/completion';
+import { calculateSeriesCompletionRate } from '@/lib/completion';
+import type { Task } from '@/lib/types';
 
 interface HabitTableProps {
   rangeStart: Date;
   rangeEnd: Date;
+}
+
+interface TaskSeriesGroup {
+  seriesId: string;
+  name: string;
+  labelId: string;
+  isRecurring: boolean;
+  tasks: Task[];
 }
 
 export default function HabitTable({ rangeStart, rangeEnd }: HabitTableProps) {
@@ -29,11 +38,33 @@ export default function HabitTable({ rangeStart, rangeEnd }: HabitTableProps) {
     }));
   }, [rangeStart, rangeEnd]);
 
-  // Filter tasks to show in table: we might only want to show recurring tasks or all tasks. 
-  // Let's show all tasks but group recurring first.
-  const displayTasks = useMemo(() => {
-    const recurring = tasks.filter((t) => t.isRecurring);
-    const nonRecurring = tasks.filter((t) => !t.isRecurring);
+  // Prompt 30: Group task occurrences by seriesId into a single row per series.
+  // Each series displays occurrences and completions on corresponding dates.
+  const seriesGroups = useMemo(() => {
+    const map = new Map<string, TaskSeriesGroup>();
+
+    for (const task of tasks) {
+      const seriesId = task.seriesId ?? task.id;
+      const existing = map.get(seriesId);
+      if (existing) {
+        existing.tasks.push(task);
+        if (task.isRecurring) {
+          existing.isRecurring = true;
+        }
+      } else {
+        map.set(seriesId, {
+          seriesId,
+          name: task.name,
+          labelId: task.labelId,
+          isRecurring: task.isRecurring,
+          tasks: [task],
+        });
+      }
+    }
+
+    const list = Array.from(map.values());
+    const recurring = list.filter((g) => g.isRecurring);
+    const nonRecurring = list.filter((g) => !g.isRecurring);
     return [...recurring, ...nonRecurring];
   }, [tasks]);
 
@@ -45,7 +76,7 @@ export default function HabitTable({ rangeStart, rangeEnd }: HabitTableProps) {
     });
   };
 
-  if (displayTasks.length === 0) {
+  if (seriesGroups.length === 0) {
     return (
       <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center text-gray-400 shadow-sm">
         <p className="text-base font-semibold text-gray-700">{t('motivation.no_tasks')}</p>
@@ -77,15 +108,21 @@ export default function HabitTable({ rangeStart, rangeEnd }: HabitTableProps) {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {displayTasks.map((task) => {
-              const pct = calculateCompletionRate(task, taskCompletions, rangeStart, rangeEnd);
-              const label = labels.find((l) => l.id === task.labelId);
-              
-              const taskStart = startOfDay(parseISO(task.startDate));
-              const taskDeadline = task.deadline ? startOfDay(parseISO(task.deadline)) : null;
+            {seriesGroups.map((series) => {
+              const seriesTaskIds = new Set(series.tasks.map((t) => t.id));
+              seriesTaskIds.add(series.seriesId);
+
+              const pct = calculateSeriesCompletionRate(
+                series.tasks,
+                series.seriesId,
+                taskCompletions,
+                rangeStart,
+                rangeEnd
+              );
+              const label = labels.find((l) => l.id === series.labelId);
 
               return (
-                <tr key={task.id} className="hover:bg-gray-50/50 transition">
+                <tr key={series.seriesId} className="hover:bg-gray-50/50 transition">
                   {/* Task Name (Sticky left) */}
                   <td className="px-4 py-3 sticky left-0 z-10 bg-white border-r border-gray-100 font-medium">
                     <div className="flex items-center gap-2">
@@ -93,12 +130,12 @@ export default function HabitTable({ rangeStart, rangeEnd }: HabitTableProps) {
                         className="w-2.5 h-2.5 rounded-full shrink-0"
                         style={{ backgroundColor: label?.color || '#ccc' }}
                       />
-                      <span className="truncate max-w-[180px]" title={task.name}>
-                        {task.name}
+                      <span className="truncate max-w-[180px]" title={series.name}>
+                        {series.name}
                       </span>
                     </div>
                   </td>
-                  
+
                   {/* % */}
                   <td className="px-4 py-3 text-center font-semibold text-gray-700">
                     {pct}%
@@ -106,21 +143,22 @@ export default function HabitTable({ rangeStart, rangeEnd }: HabitTableProps) {
 
                   {/* Days */}
                   {days.map((day) => {
-                    // Determine status
-                    const isActive = !isBefore(day.dateObj, taskStart) && (taskDeadline === null || !isAfter(day.dateObj, taskDeadline));
-                    const completion = taskCompletions.find((c) => c.taskId === task.id && c.date === day.dateStr);
+                    const dayStr = day.dateStr;
 
-                    if (!isActive) {
-                      return (
-                        <td key={day.dateStr} className="px-2 py-2 text-center text-gray-300" title={t('motivation.status_inactive')}>
-                          —
-                        </td>
-                      );
-                    }
+                    // 1. Ưu tiên hiển thị trạng thái đã xử lý (completed / skipped)
+                    const completion = taskCompletions.find(
+                      (c) =>
+                        (seriesTaskIds.has(c.taskId) || c.taskId === series.seriesId) &&
+                        c.date === dayStr
+                    );
 
                     if (completion?.status === 'completed') {
                       return (
-                        <td key={day.dateStr} className="px-2 py-2 text-center" title={t('motivation.status_completed')}>
+                        <td
+                          key={dayStr}
+                          className="px-2 py-2 text-center"
+                          title={t('motivation.status_completed')}
+                        >
                           <div className="inline-flex w-7 h-7 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 mx-auto">
                             <Check size={14} strokeWidth={2.5} />
                           </div>
@@ -130,7 +168,11 @@ export default function HabitTable({ rangeStart, rangeEnd }: HabitTableProps) {
 
                     if (completion?.status === 'skipped') {
                       return (
-                        <td key={day.dateStr} className="px-2 py-2 text-center" title={t('motivation.status_skipped')}>
+                        <td
+                          key={dayStr}
+                          className="px-2 py-2 text-center"
+                          title={t('motivation.status_skipped')}
+                        >
                           <div className="inline-flex w-7 h-7 items-center justify-center rounded-full bg-gray-100 text-gray-400 mx-auto">
                             <Ban size={14} strokeWidth={2} />
                           </div>
@@ -138,22 +180,45 @@ export default function HabitTable({ rangeStart, rangeEnd }: HabitTableProps) {
                       );
                     }
 
-                    // Pending
-                    const isFuture = day.dateStr > todayStr;
+                    // 2. Chưa xử lý: kiểm tra xem ngày này có active task hay không
+                    // - Task không có deadline: CHỈ active ở đúng ngày startDate
+                    // - Task có deadline: active trong khoảng [startDate, deadline]
+                    const activeTask = series.tasks.find((t) => {
+                      if (!t.deadline) {
+                        return t.startDate === dayStr;
+                      }
+                      const deadlineDateStr = t.deadline.split('T')[0];
+                      return t.startDate <= dayStr && dayStr <= deadlineDateStr;
+                    });
+
+                    if (!activeTask) {
+                      return (
+                        <td
+                          key={dayStr}
+                          className="px-2 py-2 text-center text-gray-300"
+                          title={t('motivation.status_inactive')}
+                        >
+                          —
+                        </td>
+                      );
+                    }
+
+                    // 3. Có active task chưa xử lý
+                    const isFuture = dayStr > todayStr;
                     if (isFuture) {
                       return (
-                        <td key={day.dateStr} className="px-2 py-2 text-center">
+                        <td key={dayStr} className="px-2 py-2 text-center">
                           <div className="inline-flex w-7 h-7 items-center justify-center rounded-full bg-gray-50 border border-dashed border-gray-200 mx-auto" />
                         </td>
                       );
                     }
 
-                    // Past or Today without completion - Clickable to quick complete
+                    // Hôm nay hoặc quá khứ chưa xử lý: nút bấm tick nhanh
                     return (
-                      <td key={day.dateStr} className="px-2 py-2 text-center">
+                      <td key={dayStr} className="px-2 py-2 text-center">
                         <button
                           type="button"
-                          onClick={() => handleQuickComplete(task.id, day.dateStr)}
+                          onClick={() => handleQuickComplete(activeTask.id, dayStr)}
                           title={t('motivation.status_pending')}
                           className="inline-flex w-7 h-7 items-center justify-center rounded-full bg-white border border-gray-300 hover:border-do_now hover:bg-teal-50 hover:text-do_now transition cursor-pointer mx-auto text-transparent"
                         >
