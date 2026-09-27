@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { format, eachDayOfInterval } from 'date-fns';
+import { format, eachDayOfInterval, startOfDay, endOfDay, parseISO } from 'date-fns';
 import { Check, Ban } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { useLanguage } from '@/lib/languageContext';
@@ -11,6 +11,8 @@ import type { Task } from '@/lib/types';
 interface HabitTableProps {
   rangeStart: Date;
   rangeEnd: Date;
+  searchText?: string;
+  labelIds?: string[];
 }
 
 interface TaskSeriesGroup {
@@ -21,7 +23,12 @@ interface TaskSeriesGroup {
   tasks: Task[];
 }
 
-export default function HabitTable({ rangeStart, rangeEnd }: HabitTableProps) {
+export default function HabitTable({
+  rangeStart,
+  rangeEnd,
+  searchText = '',
+  labelIds = [],
+}: HabitTableProps) {
   const { t } = useLanguage();
   const tasks = useAppStore((s) => s.tasks);
   const labels = useAppStore((s) => s.labels);
@@ -38,12 +45,51 @@ export default function HabitTable({ rangeStart, rangeEnd }: HabitTableProps) {
     }));
   }, [rangeStart, rangeEnd]);
 
-  // Prompt 30: Group task occurrences by seriesId into a single row per series.
-  // Each series displays occurrences and completions on corresponding dates.
+  // Prompt 31 Requirement 1 & 2:
+  // - Filter by searchText (case-insensitive)
+  // - Filter by labelIds (if any selected, task must match one)
+  // - Filter by date range using the EXACT logic as Matrix 4 ô:
+  //   * Task with deadline: startDate <= rangeEnd AND deadline >= rangeStart
+  //   * Task without deadline: startDate <= rangeEnd
+  const filteredTasks = useMemo(() => {
+    const rangeStartObj = rangeStart ? startOfDay(rangeStart) : null;
+    const rangeEndObj = rangeEnd ? endOfDay(rangeEnd) : null;
+
+    return tasks.filter((task) => {
+      // 1. Search text filter
+      if (searchText && searchText.trim()) {
+        const q = searchText.trim().toLowerCase();
+        if (!task.name.toLowerCase().includes(q)) return false;
+      }
+
+      // 2. Label filter
+      if (labelIds && labelIds.length > 0) {
+        if (!labelIds.includes(task.labelId)) return false;
+      }
+
+      // 3. Date range filter (same logic as Matrix 4 ô)
+      if (task.startDate) {
+        const taskStart = startOfDay(parseISO(task.startDate));
+        if (rangeEndObj && taskStart > rangeEndObj) {
+          return false;
+        }
+        if (rangeStartObj && task.deadline) {
+          const taskDeadline = parseISO(task.deadline);
+          if (taskDeadline < rangeStartObj) {
+            return false;
+          }
+        }
+      }
+
+      return true;
+    });
+  }, [tasks, searchText, labelIds, rangeStart, rangeEnd]);
+
+  // Prompt 30 & 31: Group filtered tasks by seriesId into 1 single row per series
   const seriesGroups = useMemo(() => {
     const map = new Map<string, TaskSeriesGroup>();
 
-    for (const task of tasks) {
+    for (const task of filteredTasks) {
       const seriesId = task.seriesId ?? task.id;
       const existing = map.get(seriesId);
       if (existing) {
@@ -66,7 +112,7 @@ export default function HabitTable({ rangeStart, rangeEnd }: HabitTableProps) {
     const recurring = list.filter((g) => g.isRecurring);
     const nonRecurring = list.filter((g) => !g.isRecurring);
     return [...recurring, ...nonRecurring];
-  }, [tasks]);
+  }, [filteredTasks]);
 
   const handleQuickComplete = (taskId: string, date: string) => {
     addTaskCompletion({
@@ -180,18 +226,19 @@ export default function HabitTable({ rangeStart, rangeEnd }: HabitTableProps) {
                       );
                     }
 
-                    // 2. Chưa xử lý: kiểm tra xem ngày này có active task hay không
-                    // - Task không có deadline: CHỈ active ở đúng ngày startDate
-                    // - Task có deadline: active trong khoảng [startDate, deadline]
-                    const activeTask = series.tasks.find((t) => {
-                      if (!t.deadline) {
-                        return t.startDate === dayStr;
-                      }
-                      const deadlineDateStr = t.deadline.split('T')[0];
-                      return t.startDate <= dayStr && dayStr <= deadlineDateStr;
+                    // 2. Chưa xử lý: kiểm tra xem ngày này có task nào cần hiển thị quick mark hay không
+                    // - Prompt 31: Với task có deadline và chưa được xử lý, CHỈ hiển thị ô trống tại ĐÚNG ngày deadline.
+                    // - Prompt 30: Với task không có deadline và chưa được xử lý, CHỈ hiển thị ô trống tại ĐÚNG ngày startDate.
+                    // - Không hiển thị ô trống có thể nhấn cho mọi ngày trong khoảng đang xem.
+                    const untreatedTask = series.tasks.find((t) => {
+                      const isProcessed = taskCompletions.some((c) => c.taskId === t.id);
+                      if (isProcessed) return false;
+
+                      const targetDate = t.deadline ? t.deadline.split('T')[0] : t.startDate;
+                      return targetDate === dayStr;
                     });
 
-                    if (!activeTask) {
+                    if (!untreatedTask) {
                       return (
                         <td
                           key={dayStr}
@@ -203,7 +250,7 @@ export default function HabitTable({ rangeStart, rangeEnd }: HabitTableProps) {
                       );
                     }
 
-                    // 3. Có active task chưa xử lý
+                    // 3. Có task chưa xử lý tại ngày này (ngày deadline hoặc ngày startDate)
                     const isFuture = dayStr > todayStr;
                     if (isFuture) {
                       return (
@@ -218,7 +265,7 @@ export default function HabitTable({ rangeStart, rangeEnd }: HabitTableProps) {
                       <td key={dayStr} className="px-2 py-2 text-center">
                         <button
                           type="button"
-                          onClick={() => handleQuickComplete(activeTask.id, dayStr)}
+                          onClick={() => handleQuickComplete(untreatedTask.id, dayStr)}
                           title={t('motivation.status_pending')}
                           className="inline-flex w-7 h-7 items-center justify-center rounded-full bg-white border border-gray-300 hover:border-do_now hover:bg-teal-50 hover:text-do_now transition cursor-pointer mx-auto text-transparent"
                         >

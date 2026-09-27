@@ -87,15 +87,14 @@ export function calculateSeriesCompletionRate(
       continue;
     }
 
-    const isActive = seriesTasks.some((t) => {
-      if (!t.deadline) {
-        return t.startDate === dayStr;
-      }
-      const deadlineDateStr = t.deadline.split('T')[0];
-      return t.startDate <= dayStr && dayStr <= deadlineDateStr;
+    const isTargetDay = seriesTasks.some((t) => {
+      const isProcessed = completions.some((c) => c.taskId === t.id);
+      if (isProcessed) return false;
+      const targetDate = t.deadline ? t.deadline.split('T')[0] : t.startDate;
+      return targetDate === dayStr;
     });
 
-    if (isActive) {
+    if (isTargetDay) {
       activeDays++;
     }
   }
