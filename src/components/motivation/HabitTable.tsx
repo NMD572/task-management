@@ -6,7 +6,7 @@ import { Check, Ban } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { useLanguage } from '@/lib/languageContext';
 import { calculateSeriesCompletionRate } from '@/lib/completion';
-import type { Task } from '@/lib/types';
+import type { Task, TaskCompletion } from '@/lib/types';
 
 interface HabitTableProps {
   rangeStart: Date;
@@ -21,6 +21,37 @@ interface TaskSeriesGroup {
   labelId: string;
   isRecurring: boolean;
   tasks: Task[];
+  taskIdsList: string[];
+}
+
+type CellStatus =
+  | { type: 'completed' }
+  | { type: 'skipped' }
+  | { type: 'pending'; targetTaskId: string; isFuture: boolean }
+  | { type: 'empty' };
+
+interface SeriesRowData {
+  series: TaskSeriesGroup;
+  pct: number;
+  cellStatuses: Map<string, CellStatus>;
+}
+
+// Helper to look up completion for any task in a series on a specific date
+function getSeriesCompletion(
+  series: TaskSeriesGroup,
+  dateStr: string,
+  completionMap: Map<string, TaskCompletion>
+): TaskCompletion | undefined {
+  // Check root seriesId
+  const rootComp = completionMap.get(`${series.seriesId}_${dateStr}`);
+  if (rootComp) return rootComp;
+
+  // Check each occurrence ID in series
+  for (const taskId of series.taskIdsList) {
+    const comp = completionMap.get(`${taskId}_${dateStr}`);
+    if (comp) return comp;
+  }
+  return undefined;
 }
 
 export default function HabitTable({
@@ -37,6 +68,7 @@ export default function HabitTable({
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
 
+  // Days list for the selected range only
   const days = useMemo(() => {
     return eachDayOfInterval({ start: rangeStart, end: rangeEnd }).map((d) => ({
       dateObj: d,
@@ -45,18 +77,29 @@ export default function HabitTable({
     }));
   }, [rangeStart, rangeEnd]);
 
+  // Prompt 32 Performance Optimization:
+  // Pre-index completions into a Map<`${taskId}_${date}`, TaskCompletion>
+  // and a Set<taskId> for quick O(1) lookups instead of scanning taskCompletions repeatedly.
+  const { completionMap, processedTaskIds } = useMemo(() => {
+    const map = new Map<string, TaskCompletion>();
+    const processed = new Set<string>();
+
+    for (const c of taskCompletions) {
+      map.set(`${c.taskId}_${c.date}`, c);
+      processed.add(c.taskId);
+    }
+
+    return { completionMap: map, processedTaskIds: processed };
+  }, [taskCompletions]);
+
   // Prompt 31 Requirement 1 & 2:
-  // - Filter by searchText (case-insensitive)
-  // - Filter by labelIds (if any selected, task must match one)
-  // - Filter by date range using the EXACT logic as Matrix 4 ô:
-  //   * Task with deadline: startDate <= rangeEnd AND deadline >= rangeStart
-  //   * Task without deadline: startDate <= rangeEnd
+  // Filter tasks using search text, labelIds, and Matrix 4 ô date-range visibility rules
   const filteredTasks = useMemo(() => {
     const rangeStartObj = rangeStart ? startOfDay(rangeStart) : null;
     const rangeEndObj = rangeEnd ? endOfDay(rangeEnd) : null;
 
     return tasks.filter((task) => {
-      // 1. Search text filter
+      // 1. Search text filter (case-insensitive)
       if (searchText && searchText.trim()) {
         const q = searchText.trim().toLowerCase();
         if (!task.name.toLowerCase().includes(q)) return false;
@@ -85,7 +128,7 @@ export default function HabitTable({
     });
   }, [tasks, searchText, labelIds, rangeStart, rangeEnd]);
 
-  // Prompt 30 & 31: Group filtered tasks by seriesId into 1 single row per series
+  // Prompt 30: Group filtered tasks by seriesId into 1 series representation
   const seriesGroups = useMemo(() => {
     const map = new Map<string, TaskSeriesGroup>();
 
@@ -94,6 +137,7 @@ export default function HabitTable({
       const existing = map.get(seriesId);
       if (existing) {
         existing.tasks.push(task);
+        existing.taskIdsList.push(task.id);
         if (task.isRecurring) {
           existing.isRecurring = true;
         }
@@ -104,6 +148,7 @@ export default function HabitTable({
           labelId: task.labelId,
           isRecurring: task.isRecurring,
           tasks: [task],
+          taskIdsList: [task.id],
         });
       }
     }
@@ -114,6 +159,83 @@ export default function HabitTable({
     return [...recurring, ...nonRecurring];
   }, [filteredTasks]);
 
+  // Prompt 32 Requirement 1, 2, 4:
+  // Compute cell statuses for each series across the date range.
+  // Filter out any row where ALL days in the range have status "—" (empty).
+  const visibleRows = useMemo(() => {
+    const rows: SeriesRowData[] = [];
+
+    for (const series of seriesGroups) {
+      const cellStatuses = new Map<string, CellStatus>();
+      let hasDataInRow = false;
+
+      for (const day of days) {
+        const dayStr = day.dateStr;
+
+        // 1. Ưu tiên kiểm tra completion đã lưu ở ngày này
+        const completion = getSeriesCompletion(series, dayStr, completionMap);
+
+        if (completion?.status === 'completed') {
+          cellStatuses.set(dayStr, { type: 'completed' });
+          hasDataInRow = true;
+          continue;
+        }
+
+        if (completion?.status === 'skipped') {
+          cellStatuses.set(dayStr, { type: 'skipped' });
+          hasDataInRow = true;
+          continue;
+        }
+
+        // 2. Không có completion ở ngày này: kiểm tra xem có task chưa xử lý có targetDate === dayStr không
+        // - Task có deadline: targetDate là ngày deadline (chỉ tại đúng ngày deadline)
+        // - Task không có deadline: targetDate là startDate (chỉ tại đúng ngày startDate)
+        // - Chỉ hiển thị khi task CHƯA được xử lý ở bất kỳ ngày nào
+        const untreatedTask = series.tasks.find((t) => {
+          if (processedTaskIds.has(t.id)) return false;
+
+          const targetDate = t.deadline ? t.deadline.split('T')[0] : t.startDate;
+          return targetDate === dayStr;
+        });
+
+        if (untreatedTask) {
+          const isFuture = dayStr > todayStr;
+          cellStatuses.set(dayStr, {
+            type: 'pending',
+            targetTaskId: untreatedTask.id,
+            isFuture,
+          });
+          hasDataInRow = true;
+          continue;
+        }
+
+        // 3. Các ngày còn lại: "—" (không có dữ liệu)
+        cellStatuses.set(dayStr, { type: 'empty' });
+      }
+
+      // Prompt 32 Requirement 1:
+      // Chỉ hiển thị task/series có ít nhất một ngày trong khoảng đang chọn mà trạng thái không phải dấu "—".
+      // Nếu tất cả ngày trong khoảng đều là "—", không hiển thị dòng task/series đó.
+      if (hasDataInRow) {
+        const pct = calculateSeriesCompletionRate(
+          series.tasks,
+          series.seriesId,
+          taskCompletions,
+          rangeStart,
+          rangeEnd
+        );
+
+        rows.push({
+          series,
+          pct,
+          cellStatuses,
+        });
+      }
+    }
+
+    return rows;
+  }, [seriesGroups, days, completionMap, processedTaskIds, todayStr, taskCompletions, rangeStart, rangeEnd]);
+
   const handleQuickComplete = (taskId: string, date: string) => {
     addTaskCompletion({
       taskId,
@@ -122,7 +244,7 @@ export default function HabitTable({
     });
   };
 
-  if (seriesGroups.length === 0) {
+  if (visibleRows.length === 0) {
     return (
       <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center text-gray-400 shadow-sm">
         <p className="text-base font-semibold text-gray-700">{t('motivation.no_tasks')}</p>
@@ -154,17 +276,7 @@ export default function HabitTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {seriesGroups.map((series) => {
-              const seriesTaskIds = new Set(series.tasks.map((t) => t.id));
-              seriesTaskIds.add(series.seriesId);
-
-              const pct = calculateSeriesCompletionRate(
-                series.tasks,
-                series.seriesId,
-                taskCompletions,
-                rangeStart,
-                rangeEnd
-              );
+            {visibleRows.map(({ series, pct, cellStatuses }) => {
               const label = labels.find((l) => l.id === series.labelId);
 
               return (
@@ -190,15 +302,10 @@ export default function HabitTable({
                   {/* Days */}
                   {days.map((day) => {
                     const dayStr = day.dateStr;
+                    const cell = cellStatuses.get(dayStr) ?? { type: 'empty' };
 
-                    // 1. Ưu tiên hiển thị trạng thái đã xử lý (completed / skipped)
-                    const completion = taskCompletions.find(
-                      (c) =>
-                        (seriesTaskIds.has(c.taskId) || c.taskId === series.seriesId) &&
-                        c.date === dayStr
-                    );
-
-                    if (completion?.status === 'completed') {
+                    // 1. Completed
+                    if (cell.type === 'completed') {
                       return (
                         <td
                           key={dayStr}
@@ -212,7 +319,8 @@ export default function HabitTable({
                       );
                     }
 
-                    if (completion?.status === 'skipped') {
+                    // 2. Skipped
+                    if (cell.type === 'skipped') {
                       return (
                         <td
                           key={dayStr}
@@ -226,51 +334,40 @@ export default function HabitTable({
                       );
                     }
 
-                    // 2. Chưa xử lý: kiểm tra xem ngày này có task nào cần hiển thị quick mark hay không
-                    // - Prompt 31: Với task có deadline và chưa được xử lý, CHỈ hiển thị ô trống tại ĐÚNG ngày deadline.
-                    // - Prompt 30: Với task không có deadline và chưa được xử lý, CHỈ hiển thị ô trống tại ĐÚNG ngày startDate.
-                    // - Không hiển thị ô trống có thể nhấn cho mọi ngày trong khoảng đang xem.
-                    const untreatedTask = series.tasks.find((t) => {
-                      const isProcessed = taskCompletions.some((c) => c.taskId === t.id);
-                      if (isProcessed) return false;
+                    // 3. Pending untreated task on target date
+                    if (cell.type === 'pending') {
+                      // Ngày tương lai: vòng tròn nét đứt
+                      if (cell.isFuture) {
+                        return (
+                          <td key={dayStr} className="px-2 py-2 text-center">
+                            <div className="inline-flex w-7 h-7 items-center justify-center rounded-full bg-gray-50 border border-dashed border-gray-200 mx-auto" />
+                          </td>
+                        );
+                      }
 
-                      const targetDate = t.deadline ? t.deadline.split('T')[0] : t.startDate;
-                      return targetDate === dayStr;
-                    });
-
-                    if (!untreatedTask) {
-                      return (
-                        <td
-                          key={dayStr}
-                          className="px-2 py-2 text-center text-gray-300"
-                          title={t('motivation.status_inactive')}
-                        >
-                          —
-                        </td>
-                      );
-                    }
-
-                    // 3. Có task chưa xử lý tại ngày này (ngày deadline hoặc ngày startDate)
-                    const isFuture = dayStr > todayStr;
-                    if (isFuture) {
+                      // Hôm nay hoặc quá khứ: nút bấm tick nhanh
                       return (
                         <td key={dayStr} className="px-2 py-2 text-center">
-                          <div className="inline-flex w-7 h-7 items-center justify-center rounded-full bg-gray-50 border border-dashed border-gray-200 mx-auto" />
+                          <button
+                            type="button"
+                            onClick={() => handleQuickComplete(cell.targetTaskId, dayStr)}
+                            title={t('motivation.status_pending')}
+                            className="inline-flex w-7 h-7 items-center justify-center rounded-full bg-white border border-gray-300 hover:border-do_now hover:bg-teal-50 hover:text-do_now transition cursor-pointer mx-auto text-transparent"
+                          >
+                            <Check size={14} strokeWidth={2.5} />
+                          </button>
                         </td>
                       );
                     }
 
-                    // Hôm nay hoặc quá khứ chưa xử lý: nút bấm tick nhanh
+                    // 4. Empty / Inactive day: "—"
                     return (
-                      <td key={dayStr} className="px-2 py-2 text-center">
-                        <button
-                          type="button"
-                          onClick={() => handleQuickComplete(untreatedTask.id, dayStr)}
-                          title={t('motivation.status_pending')}
-                          className="inline-flex w-7 h-7 items-center justify-center rounded-full bg-white border border-gray-300 hover:border-do_now hover:bg-teal-50 hover:text-do_now transition cursor-pointer mx-auto text-transparent"
-                        >
-                          <Check size={14} strokeWidth={2.5} />
-                        </button>
+                      <td
+                        key={dayStr}
+                        className="px-2 py-2 text-center text-gray-300"
+                        title={t('motivation.status_inactive')}
+                      >
+                        —
                       </td>
                     );
                   })}
