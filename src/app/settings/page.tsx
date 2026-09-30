@@ -4,6 +4,7 @@ import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import {
   Bell,
+  BellOff,
   ArrowLeft,
   Clock,
   Calendar,
@@ -23,7 +24,7 @@ import ConfirmModal from '@/components/common/ConfirmModal';
 import { FilterProvider } from '@/lib/filterContext';
 import { useLanguage } from '@/lib/languageContext';
 import { useAppStore } from '@/lib/store';
-import { validateTimeWindow } from '@/lib/notification';
+import { validateTimeWindow, requestNotificationPermission } from '@/lib/notification';
 import type { Classification, Label, NotificationTimeWindow } from '@/lib/types';
 
 // ── Quadrant Info ──────────────────────────────────────────────────────────
@@ -129,10 +130,51 @@ function SettingsContent() {
 
   const { generalEnabled, perQuadrant, reminderDays } = notificationConfig;
   const timeWindows: NotificationTimeWindow[] = notificationConfig.timeWindows || [];
+  const notificationLabelIds = notificationConfig.notificationLabelIds || [];
+  const isAllLabelsSelected = notificationLabelIds.length === 0;
+
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
+
+  const getLabelDisplayName = (lbl: { id: string; name: string; isDefault?: boolean }) => {
+    if (lbl.isDefault && (lbl.id === 'personal' || lbl.id === 'work' || lbl.id === 'learning')) {
+      return t(`labels.${lbl.id}`);
+    }
+    return lbl.name;
+  };
+
+  const handleSelectAllNotificationLabels = () => {
+    updateNotificationConfig({ notificationLabelIds: [] });
+  };
+
+  const handleToggleNotificationLabel = (labelId: string) => {
+    if (isAllLabelsSelected) {
+      updateNotificationConfig({ notificationLabelIds: [labelId] });
+    } else {
+      const exists = notificationLabelIds.includes(labelId);
+      const next = exists
+        ? notificationLabelIds.filter((id) => id !== labelId)
+        : [...notificationLabelIds, labelId];
+      updateNotificationConfig({ notificationLabelIds: next });
+    }
+  };
 
   // Toggle general notifications
-  const handleToggleGeneral = () => {
-    updateNotificationConfig({ generalEnabled: !generalEnabled });
+  const handleToggleGeneral = async () => {
+    const nextState = !generalEnabled;
+    updateNotificationConfig({ generalEnabled: nextState });
+
+    if (nextState && typeof window !== 'undefined' && 'Notification' in window) {
+      const currentPermission = Notification.permission;
+      if (currentPermission === 'default') {
+        const granted = await requestNotificationPermission();
+        if (!granted && (Notification.permission as NotificationPermission) === 'denied') {
+          setShowPermissionModal(true);
+        }
+      } else if (currentPermission === 'denied') {
+        await requestNotificationPermission();
+        setShowPermissionModal(true);
+      }
+    }
   };
 
   // Toggle individual quadrant
@@ -331,7 +373,88 @@ function SettingsContent() {
                 </div>
               </div>
 
-              {/* ── B. Reminder days input ── */}
+              {/* ── B. Filter by Label ── */}
+              <div className="pt-4 border-t border-gray-100">
+                <div className="mb-3">
+                  <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
+                    <Tag size={16} className="text-gray-400" />
+                    {t('settings.notification_labels.title')}
+                  </label>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {t('settings.notification_labels.description')}
+                  </p>
+                </div>
+
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                  {/* Option "Tất cả nhãn" */}
+                  <div
+                    onClick={handleSelectAllNotificationLabels}
+                    className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
+                      isAllLabelsSelected
+                        ? 'border-do_now bg-teal-50/50 shadow-xs'
+                        : 'border-gray-200 bg-white hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-3.5 h-3.5 rounded-full bg-gray-400 shrink-0" />
+                      <span
+                        className={`text-sm ${
+                          isAllLabelsSelected ? 'font-semibold text-do_now' : 'font-medium text-gray-700'
+                        }`}
+                      >
+                        {t('settings.notification_labels.all_labels')}
+                      </span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={isAllLabelsSelected}
+                      onChange={handleSelectAllNotificationLabels}
+                      className="w-4 h-4 text-do_now rounded border-gray-300 focus:ring-do_now cursor-pointer"
+                    />
+                  </div>
+
+                  {/* Danh sách labels */}
+                  {labels.map((label) => {
+                    const isChecked = !isAllLabelsSelected && notificationLabelIds.includes(label.id);
+                    return (
+                      <div
+                        key={label.id}
+                        onClick={() => handleToggleNotificationLabel(label.id)}
+                        className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
+                          isChecked
+                            ? 'border-do_now bg-teal-50/50 shadow-xs'
+                            : isAllLabelsSelected
+                            ? 'border-gray-150 bg-gray-50/40 opacity-60'
+                            : 'border-gray-200 bg-white hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span
+                            className="w-3.5 h-3.5 rounded-full shrink-0 shadow-xs ring-1 ring-black/10"
+                            style={{ backgroundColor: label.color }}
+                          />
+                          <span
+                            className={`text-sm ${
+                              isChecked ? 'font-semibold text-do_now' : 'font-medium text-gray-700'
+                            }`}
+                          >
+                            {getLabelDisplayName(label)}
+                          </span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          disabled={isAllLabelsSelected}
+                          onChange={() => handleToggleNotificationLabel(label.id)}
+                          className="w-4 h-4 text-do_now rounded border-gray-300 focus:ring-do_now cursor-pointer disabled:opacity-40"
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* ── C. Reminder days input ── */}
               <div className="pt-4 border-t border-gray-100">
                 <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
                   <Calendar size={16} className="text-gray-400" />
@@ -357,7 +480,7 @@ function SettingsContent() {
                 </p>
               </div>
 
-              {/* ── C. Multiple Time Windows ── */}
+              {/* ── D. Multiple Time Windows ── */}
               <div className="pt-4 border-t border-gray-100">
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
@@ -779,6 +902,36 @@ function SettingsContent() {
           </p>
         }
       />
+
+      {/* ── Modal thông báo quyền Notification bị chặn hoặc cần cấp quyền ── */}
+      {showPermissionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 animate-in fade-in">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600 shrink-0">
+                <BellOff size={20} />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-gray-900">
+                  {t('notification.permission_denied')}
+                </h3>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              {t('notification.permission_denied_desc')}
+            </p>
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setShowPermissionModal(false)}
+                className="rounded-lg bg-do_now px-4 py-2 text-sm font-medium text-white hover:bg-teal-600 transition"
+              >
+                {t('common.close')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

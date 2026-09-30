@@ -257,6 +257,11 @@
         "invalid_time": "Giờ không hợp lệ.",
         "cancel": "Huỷ",
         "save": "Lưu khung giờ"
+      },
+      "notification_labels": {
+        "title": "Lọc theo nhãn",
+        "description": "Chỉ gửi thông báo cho task thuộc các nhãn đã chọn. Chọn \"Tất cả nhãn\" để không giới hạn.",
+        "all_labels": "Tất cả nhãn"
       }
     },
     "custom_labels": {
@@ -307,6 +312,11 @@
       "threshold_label": "Số ngày ngưỡng",
       "threshold_desc": "Nâng cấp khi (Deadline − Hôm nay) ≤ số ngày này (ví dụ: 2 ngày).",
       "days_unit": "ngày"
+    },
+    "notification_labels": {
+      "title": "Lọc theo nhãn",
+      "description": "Chỉ gửi thông báo cho task thuộc các nhãn đã chọn. Chọn \"Tất cả nhãn\" để không giới hạn.",
+      "all_labels": "Tất cả nhãn"
     }
   },
   "motivation": {
@@ -327,6 +337,7 @@
   "notification": {
     "reminder_title": "Nhắc việc sắp đến hạn",
     "reminder_body": "Task \"{name}\" đến hạn {date}",
-    "permission_denied": "Trình duyệt không cho phép thông báo"
+    "permission_denied": "Trình duyệt không cho phép thông báo",
+    "permission_denied_desc": "Trình duyệt đang chặn thông báo cho trang web này. Vui lòng cho phép quyền thông báo trong cài đặt trang web của trình duyệt để nhận nhắc việc."
   }
 }

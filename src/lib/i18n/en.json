@@ -307,6 +307,11 @@
       "threshold_label": "Threshold Days",
       "threshold_desc": "Upgrade when (Deadline − Today) ≤ this number of days (e.g. 2 days).",
       "days_unit": "days"
+    },
+    "notification_labels": {
+      "title": "Filter by label",
+      "description": "Only notify tasks with selected labels. Choose \"All labels\" to disable filtering.",
+      "all_labels": "All labels"
     }
   },
   "motivation": {
@@ -327,6 +332,7 @@
   "notification": {
     "reminder_title": "Task reminder",
     "reminder_body": "Task \"{name}\" is due {date}",
-    "permission_denied": "Browser notifications not allowed"
+    "permission_denied": "Browser notifications not allowed",
+    "permission_denied_desc": "Notifications are blocked by your browser. Please allow notifications in your browser's site settings to receive reminders."
   }
 }

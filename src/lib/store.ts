@@ -31,6 +31,7 @@ const DEFAULT_NOTIFICATION_CONFIG: NotificationConfig = {
   },
   reminderDays: 2,
   timeWindows: [],
+  notificationLabelIds: [],
 };
 
 const DEFAULT_COMPLETION_SETTINGS: CompletionSettings = {
@@ -197,6 +198,12 @@ export const useAppStore = create<AppState>()(
             tasks: state.tasks.map((task) =>
               task.labelId === id ? { ...task, labelId: defaultLabelId } : task
             ),
+            notificationConfig: {
+              ...state.notificationConfig,
+              notificationLabelIds: (
+                state.notificationConfig?.notificationLabelIds || []
+              ).filter((lid) => lid !== id),
+            },
           };
         }),
 
@@ -237,6 +244,10 @@ export const useAppStore = create<AppState>()(
             timeWindows:
               config.timeWindows ??
               state.notificationConfig?.timeWindows ??
+              [],
+            notificationLabelIds:
+              config.notificationLabelIds ??
+              state.notificationConfig?.notificationLabelIds ??
               [],
           },
         })),

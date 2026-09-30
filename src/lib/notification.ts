@@ -83,10 +83,6 @@ export async function requestNotificationPermission(): Promise<boolean> {
     return true;
   }
 
-  if (Notification.permission === 'denied') {
-    return false;
-  }
-
   try {
     const result = Notification.requestPermission();
     let permission: NotificationPermission;
@@ -132,6 +128,14 @@ export function sendTaskReminder(
     return;
   }
 
+  if (
+    config.notificationLabelIds &&
+    config.notificationLabelIds.length > 0 &&
+    !config.notificationLabelIds.includes(task.labelId)
+  ) {
+    return;
+  }
+
   if (!task.deadline) {
     return;
   }
@@ -164,6 +168,7 @@ export function sendTaskReminder(
  * - generalEnabled is true and Notification.permission is 'granted'
  * - Current time falls within configured time windows (or no time window restrictions)
  * - Task has deadline and quadrant notification is enabled
+ * - Task matches label filter (if notificationLabelIds is configured)
  * - Task is NOT completed or skipped today
  * - (deadline - today) <= reminderDays (and non-negative)
  */
@@ -199,6 +204,15 @@ export function checkAndNotify(
     }
 
     if (!notificationConfig.perQuadrant || !notificationConfig.perQuadrant[task.classification]) {
+      continue;
+    }
+
+    // Filter by label if notificationLabelIds is configured
+    if (
+      notificationConfig.notificationLabelIds &&
+      notificationConfig.notificationLabelIds.length > 0 &&
+      !notificationConfig.notificationLabelIds.includes(task.labelId)
+    ) {
       continue;
     }
 

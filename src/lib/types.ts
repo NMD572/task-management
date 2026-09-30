@@ -56,6 +56,7 @@ export interface NotificationConfig {
   perQuadrant: Record<Classification, boolean>; // default: do_now/schedule/delegate = true, eliminate = false
   reminderDays: number;               // default 2. Công thức: deadline - hôm nay <= reminderDays thì nhắc
   timeWindows: NotificationTimeWindow[]; // danh sách các khung giờ hiển thị thông báo
+  notificationLabelIds?: string[];    // danh sách labelId được nhận thông báo (rỗng = tất cả nhãn)
 }
 
 export interface CompletionSettings {
