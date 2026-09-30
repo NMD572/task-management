@@ -259,7 +259,7 @@ export default function HabitTable({
         <table className="w-full text-sm text-left">
           <thead className="bg-gray-50 text-gray-600 border-b border-gray-200 text-xs uppercase font-semibold">
             <tr>
-              <th className="px-4 py-3 sticky left-0 z-10 bg-gray-50 border-r border-gray-200 min-w-[200px]">
+              <th className="px-4 py-3 sticky left-0 z-10 bg-gray-50 border-r border-gray-200 min-w-[140px] sm:min-w-[200px]">
                 {t('motivation.col_task')}
               </th>
               <th className="px-4 py-3 text-center whitespace-nowrap min-w-[60px]">
@@ -288,7 +288,7 @@ export default function HabitTable({
                         className="w-2.5 h-2.5 rounded-full shrink-0"
                         style={{ backgroundColor: label?.color || '#ccc' }}
                       />
-                      <span className="truncate max-w-[180px]" title={series.name}>
+                      <span className="truncate max-w-[100px] sm:max-w-[180px]" title={series.name}>
                         {series.name}
                       </span>
                     </div>

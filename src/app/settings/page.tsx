@@ -231,7 +231,7 @@ function SettingsContent() {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header />
 
-      <main className="flex-1 mx-auto w-full max-w-3xl px-4 py-8">
+      <main className="flex-1 mx-auto w-full max-w-3xl px-4 py-6 sm:py-8">
         {/* ── Breadcrumb / Header Navigation ── */}
         <div className="mb-6 flex items-center justify-between">
           <Link
@@ -266,7 +266,7 @@ function SettingsContent() {
           {/* ══════════════════════════════════════════════════════════════════
               1. SECTION: CƠ BẢN (THÔNG BÁO TỔNG QUÁT)
           ══════════════════════════════════════════════════════════════════ */}
-          <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+          <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-6">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h2 className="text-base font-semibold text-gray-900">
@@ -300,7 +300,7 @@ function SettingsContent() {
               2. SECTION: NÂNG CAO (THÔNG BÁO CHI TIẾT)
           ══════════════════════════════════════════════════════════════════ */}
           <section
-            className={`bg-white rounded-2xl border border-gray-200 shadow-sm p-6 transition-all ${
+            className={`bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-6 transition-all ${
               !generalEnabled ? 'opacity-50 pointer-events-none select-none' : ''
             }`}
           >
@@ -618,7 +618,7 @@ function SettingsContent() {
           {/* ══════════════════════════════════════════════════════════════════
               3. SECTION: QUẢN LÝ NHÃN TUỲ CHỈNH (CUSTOM LABELS)
           ══════════════════════════════════════════════════════════════════ */}
-          <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+          <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-6">
             <div className="border-b border-gray-100 pb-4 mb-5 flex items-center justify-between">
               <div>
                 <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
@@ -767,7 +767,7 @@ function SettingsContent() {
           {/* ══════════════════════════════════════════════════════════════════
               4. SECTION: THIẾT LẬP HOÀN THÀNH / BỎ QUA (COMPLETION SETTINGS)
           ══════════════════════════════════════════════════════════════════ */}
-          <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+          <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-6">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
@@ -805,7 +805,7 @@ function SettingsContent() {
           {/* ══════════════════════════════════════════════════════════════════
               5. SECTION: TỰ ĐỘNG NÂNG MỨC ĐỘ KHẨN CẤP (URGENCY AUTO-UPGRADE)
           ══════════════════════════════════════════════════════════════════ */}
-          <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+          <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-6">
             <div className="border-b border-gray-100 pb-4 mb-5 flex items-center justify-between gap-4">
               <div>
                 <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">

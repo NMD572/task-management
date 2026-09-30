@@ -132,11 +132,11 @@ function MotivationContent() {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header />
 
-      <main className="flex-1 mx-auto w-full max-w-screen-xl px-4 py-8 overflow-hidden flex flex-col">
+      <main className="flex-1 mx-auto w-full max-w-screen-xl px-4 py-6 sm:py-8 flex flex-col">
         {/* Filters bar: Search + Label + Date range + Clear filter */}
         <div className="flex items-center gap-3 mb-6 flex-wrap shrink-0">
           {/* 1. Search text input */}
-          <div className="relative min-w-[200px] max-w-xs">
+          <div className="relative min-w-0 w-full sm:w-auto sm:min-w-[180px] sm:max-w-xs">
             <Search
               size={14}
               className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
@@ -180,7 +180,7 @@ function MotivationContent() {
             </button>
 
             {/* Dropdown */}
-            <div className="absolute left-0 top-full mt-1 z-30 hidden group-focus-within:flex flex-col min-w-[200px] rounded-xl border border-gray-200 bg-white shadow-lg py-1 focus-within:flex">
+            <div className="absolute left-0 top-full mt-1 z-30 hidden group-focus-within:flex flex-col min-w-[180px] max-w-[calc(100vw-2rem)] rounded-xl border border-gray-200 bg-white shadow-lg py-1 focus-within:flex">
               {labels.map((label) => {
                 const checked = labelIds.includes(label.id);
                 return (

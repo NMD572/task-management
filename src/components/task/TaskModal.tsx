@@ -71,7 +71,7 @@ export default function TaskModal({ task, isOpen, onClose }: TaskModalProps) {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 animate-in fade-in duration-150"
+        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 sm:px-4 animate-in fade-in duration-150"
         onClick={(e) => {
           // Check backdrop click
           if (dialogRef.current && !dialogRef.current.contains(e.target as Node)) {
@@ -85,7 +85,7 @@ export default function TaskModal({ task, isOpen, onClose }: TaskModalProps) {
           role="dialog"
           aria-modal="true"
           aria-label={modalTitle}
-          className="w-full max-w-lg rounded-2xl bg-white shadow-xl flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-150"
+          className="w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl bg-white shadow-xl flex flex-col max-h-[92vh] sm:max-h-[90vh] overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
         >
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">

@@ -43,7 +43,7 @@ export default function Header() {
   return (
     <>
       <header className="sticky top-0 z-40 w-full bg-white border-b border-gray-200 shadow-sm">
-        <div className="mx-auto max-w-screen-xl px-4 py-3 flex items-center gap-3">
+        <div className="mx-auto max-w-screen-xl px-4 py-3 flex items-center gap-2 sm:gap-3">
           {/* ── Logo / App name ── */}
           <Link
             href="/"
@@ -93,7 +93,7 @@ export default function Header() {
           </div>
 
           {/* ── Right-side actions ── */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             {/* Add task button */}
             <button
               type="button"
@@ -140,7 +140,7 @@ export default function Header() {
               className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition cursor-pointer"
             >
               <Globe size={16} />
-              <span className="font-semibold text-xs">{language.toUpperCase()}</span>
+              <span className="hidden sm:inline font-semibold text-xs">{language.toUpperCase()}</span>
             </button>
 
             {/* Settings link */}

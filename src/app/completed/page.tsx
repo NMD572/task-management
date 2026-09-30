@@ -121,7 +121,7 @@ function CompletedTasksContent() {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header />
 
-      <main className="flex-1 mx-auto w-full max-w-4xl px-4 py-8">
+      <main className="flex-1 mx-auto w-full max-w-4xl px-4 py-6 sm:py-8">
         {/* Date range filter */}
         <div className="flex items-center gap-3 mb-6 flex-wrap">
           <div className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">

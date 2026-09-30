@@ -55,7 +55,7 @@ export default function FilterBar() {
 
         {/* Dropdown */}
         <div className="absolute left-0 top-full mt-1 z-30 hidden group-focus-within:flex flex-col
-                        min-w-[200px] rounded-xl border border-gray-200 bg-white shadow-lg py-1 focus-within:flex">
+                        min-w-[180px] max-w-[calc(100vw-2rem)] rounded-xl border border-gray-200 bg-white shadow-lg py-1 focus-within:flex">
           {labels.map((label) => {
             const checked = labelIds.includes(label.id);
             return (
