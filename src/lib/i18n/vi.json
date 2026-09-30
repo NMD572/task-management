@@ -323,5 +323,10 @@
     "status_pending": "Chưa xử lý — click để hoàn thành nhanh",
     "status_inactive": "Task không active ngày này",
     "clear_filter": "Xoá bộ lọc"
+  },
+  "notification": {
+    "reminder_title": "Nhắc việc sắp đến hạn",
+    "reminder_body": "Task \"{name}\" đến hạn {date}",
+    "permission_denied": "Trình duyệt không cho phép thông báo"
   }
 }

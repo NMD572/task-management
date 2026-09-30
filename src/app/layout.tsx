@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import AuthProvider from "@/components/auth/AuthProvider";
 import { LanguageProvider } from "@/lib/languageContext";
+import NotificationScheduler from "@/components/common/NotificationScheduler";
 import "./globals.css";
 
 const geistSans = localFont({
@@ -32,6 +33,7 @@ export default function RootLayout({
       >
         <LanguageProvider>
           <AuthProvider>
+            <NotificationScheduler />
             {children}
           </AuthProvider>
         </LanguageProvider>

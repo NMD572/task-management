@@ -323,5 +323,10 @@
     "status_pending": "Pending — click to quick-complete",
     "status_inactive": "Task not active on this day",
     "clear_filter": "Clear filter"
+  },
+  "notification": {
+    "reminder_title": "Task reminder",
+    "reminder_body": "Task \"{name}\" is due {date}",
+    "permission_denied": "Browser notifications not allowed"
   }
 }
