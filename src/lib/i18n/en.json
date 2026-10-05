@@ -325,8 +325,12 @@
     "col_progress": "Progress",
     "status_completed": "Completed",
     "status_skipped": "Skipped",
-    "status_pending": "Pending — click to quick-complete",
+    "status_pending": "Pending",
     "status_inactive": "Task not active on this day",
+    "quick_complete": "Quick complete",
+    "quick_skip": "Quick skip",
+    "quick_complete_aria": "Mark complete {date}",
+    "quick_skip_aria": "Mark skipped {date}",
     "clear_filter": "Clear filter"
   },
   "notification": {

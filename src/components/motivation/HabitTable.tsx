@@ -25,8 +25,8 @@ interface TaskSeriesGroup {
 }
 
 type CellStatus =
-  | { type: 'completed' }
-  | { type: 'skipped' }
+  | { type: 'completed'; note?: string }
+  | { type: 'skipped'; note?: string }
   | { type: 'pending'; targetTaskId: string; isFuture: boolean }
   | { type: 'empty' };
 
@@ -176,13 +176,13 @@ export default function HabitTable({
         const completion = getSeriesCompletion(series, dayStr, completionMap);
 
         if (completion?.status === 'completed') {
-          cellStatuses.set(dayStr, { type: 'completed' });
+          cellStatuses.set(dayStr, { type: 'completed', note: completion.note });
           hasDataInRow = true;
           continue;
         }
 
         if (completion?.status === 'skipped') {
-          cellStatuses.set(dayStr, { type: 'skipped' });
+          cellStatuses.set(dayStr, { type: 'skipped', note: completion.note });
           hasDataInRow = true;
           continue;
         }
@@ -241,6 +241,14 @@ export default function HabitTable({
       taskId,
       date,
       status: 'completed',
+    });
+  };
+
+  const handleQuickSkip = (taskId: string, date: string) => {
+    addTaskCompletion({
+      taskId,
+      date,
+      status: 'skipped',
     });
   };
 
@@ -310,7 +318,7 @@ export default function HabitTable({
                         <td
                           key={dayStr}
                           className="px-2 py-2 text-center"
-                          title={t('motivation.status_completed')}
+                          title={cell.note || t('motivation.status_completed')}
                         >
                           <div className="inline-flex w-7 h-7 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 mx-auto">
                             <Check size={14} strokeWidth={2.5} />
@@ -325,7 +333,7 @@ export default function HabitTable({
                         <td
                           key={dayStr}
                           className="px-2 py-2 text-center"
-                          title={t('motivation.status_skipped')}
+                          title={cell.note || t('motivation.status_skipped')}
                         >
                           <div className="inline-flex w-7 h-7 items-center justify-center rounded-full bg-gray-100 text-gray-400 mx-auto">
                             <Ban size={14} strokeWidth={2} />
@@ -336,7 +344,7 @@ export default function HabitTable({
 
                     // 3. Pending untreated task on target date
                     if (cell.type === 'pending') {
-                      // Ngày tương lai: vòng tròn nét đứt
+                      // Ngày tương lai: vòng tròn nét đứt (không cho quick action)
                       if (cell.isFuture) {
                         return (
                           <td key={dayStr} className="px-2 py-2 text-center">
@@ -345,17 +353,31 @@ export default function HabitTable({
                         );
                       }
 
-                      // Hôm nay hoặc quá khứ: nút bấm tick nhanh
+                      // Hôm nay hoặc quá khứ: 2 nút quick action (complete + skip) cạnh nhau
                       return (
-                        <td key={dayStr} className="px-2 py-2 text-center">
-                          <button
-                            type="button"
-                            onClick={() => handleQuickComplete(cell.targetTaskId, dayStr)}
-                            title={t('motivation.status_pending')}
-                            className="inline-flex w-7 h-7 items-center justify-center rounded-full bg-white border border-gray-300 hover:border-do_now hover:bg-teal-50 hover:text-do_now transition cursor-pointer mx-auto text-transparent"
-                          >
-                            <Check size={14} strokeWidth={2.5} />
-                          </button>
+                        <td key={dayStr} className="px-1 py-2 text-center">
+                          <div className="inline-flex items-center gap-0.5 mx-auto">
+                            {/* Quick complete button */}
+                            <button
+                              type="button"
+                              onClick={() => handleQuickComplete(cell.targetTaskId, dayStr)}
+                              title={t('motivation.quick_complete_aria', { date: day.label })}
+                              aria-label={t('motivation.quick_complete_aria', { date: day.label })}
+                              className="inline-flex w-6 h-6 items-center justify-center rounded-full bg-white border border-gray-200 text-transparent hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-600 transition cursor-pointer"
+                            >
+                              <Check size={12} strokeWidth={2.5} />
+                            </button>
+                            {/* Quick skip button */}
+                            <button
+                              type="button"
+                              onClick={() => handleQuickSkip(cell.targetTaskId, dayStr)}
+                              title={t('motivation.quick_skip_aria', { date: day.label })}
+                              aria-label={t('motivation.quick_skip_aria', { date: day.label })}
+                              className="inline-flex w-6 h-6 items-center justify-center rounded-full bg-white border border-gray-200 text-transparent hover:border-gray-400 hover:bg-gray-100 hover:text-gray-500 transition cursor-pointer"
+                            >
+                              <Ban size={11} strokeWidth={2} />
+                            </button>
+                          </div>
                         </td>
                       );
                     }

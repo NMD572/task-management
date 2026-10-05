@@ -330,8 +330,12 @@
     "col_progress": "Tiến độ",
     "status_completed": "Đã hoàn thành",
     "status_skipped": "Đã bỏ qua",
-    "status_pending": "Chưa xử lý — click để hoàn thành nhanh",
+    "status_pending": "Chưa xử lý",
     "status_inactive": "Task không active ngày này",
+    "quick_complete": "Hoàn thành nhanh",
+    "quick_skip": "Bỏ qua nhanh",
+    "quick_complete_aria": "Hoàn thành {date}",
+    "quick_skip_aria": "Bỏ qua {date}",
     "clear_filter": "Xoá bộ lọc"
   },
   "notification": {
