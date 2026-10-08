@@ -18,7 +18,6 @@ import {
   Star,
   Check,
   Ban,
-  Activity,
   HeartHandshake,
   Compass,
 } from 'lucide-react';
@@ -52,7 +51,7 @@ function AboutContent() {
             </div>
 
             {/* Main Heading */}
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900 max-w-4xl mx-auto leading-tight md:leading-snug">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 max-w-4xl mx-auto leading-tight md:leading-snug">
               {t('about.hero_title')}
             </h1>
 
@@ -116,10 +115,6 @@ function AboutContent() {
                       <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-1 text-emerald-700 font-semibold">
                         <Check size={12} strokeWidth={2.5} />
                         {t('about.mockup_today')}
-                      </span>
-                      <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-amber-700 font-semibold">
-                        <Activity size={12} />
-                        {t('about.mockup_streak')}: 7 {t('about.mockup_days')}
                       </span>
                     </div>
                   </div>
@@ -223,7 +218,7 @@ function AboutContent() {
                 <Compass size={14} className="text-amber-600" />
                 {t('about.philosophy_badge')}
               </span>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">
                 {t('about.philosophy_title')}
               </h2>
               <p className="mt-4 text-sm sm:text-base text-gray-600 leading-relaxed">
@@ -356,7 +351,7 @@ function AboutContent() {
                 <Sparkles size={14} className="text-do_now" />
                 {t('about.features_badge')}
               </span>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">
                 {t('about.features_title')}
               </h2>
               <p className="mt-4 text-sm sm:text-base text-gray-600 leading-relaxed">
@@ -458,7 +453,7 @@ function AboutContent() {
                 <Play size={14} className="text-do_now fill-do_now" />
                 {t('about.video_badge')}
               </span>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">
                 {t('about.video_title')}
               </h2>
               <p className="mt-4 text-sm sm:text-base text-gray-600 leading-relaxed">
@@ -547,7 +542,7 @@ function AboutContent() {
                 <span className="inline-block rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-teal-100 mb-4 backdrop-blur-xs">
                   {t('about.cta_badge')}
                 </span>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight">
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold">
                   {t('about.cta_title')}
                 </h2>
                 <p className="mt-4 text-xs sm:text-sm text-teal-100 leading-relaxed max-w-lg mx-auto">
